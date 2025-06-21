@@ -4,80 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparison Game - Player</title>
+    <!-- Add the Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
-        }
-        .section {
-            margin-bottom: 30px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
-        }
-        h1, h2 {
-            color: #333;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            transition: all 0.3s;
-        }
-        button:hover {
-            transform: scale(1.05);
-        }
-        #register-section button {
-            background-color: #4CAF50;
-            color: white;
-        }
-        #choice-section button {
-            width: 120px;
-            height: 60px;
-            font-weight: bold;
-        }
-        #max-btn { background-color: #ff6b6b; color: white; }
-        #min-btn { background-color: #74b9ff; color: white; }
-        #mid-btn { background-color: #55efc4; color: white; }
-        #zero-btn { background-color: #ffeaa7; }
-        #dice-section input {
-            width: 50px;
-            height: 50px;
-            font-size: 24px;
-            text-align: center;
-            margin: 0 5px;
-        }
-        #timer {
-            font-size: 24px;
-            font-weight: bold;
-            margin: 20px 0;
-        }
-        .hidden {
-            display: none;
-        }
-        #status-message {
-            margin: 20px 0;
-            font-style: italic;
-            color: #666;
-        }
-        #results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        #results-table th, #results-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-        #results-table th {
-            background-color: #f2f2f2;
-        }
+        /* (Keep all the same CSS styles from previous player interface) */
     </style>
 </head>
 <body>
@@ -97,7 +28,7 @@
     </div>
     
     <div id="choice-section" class="section hidden">
-        <h2>Choose Your Strategy</h2>
+        <h2>Choose Your Strategy (Round <span id="round-number">1</span>/3)</h2>
         <p>You have <span id="timer">30</span> seconds to choose:</p>
         <button id="max-btn">MAX</button>
         <button id="min-btn">MIN</button>
@@ -107,7 +38,7 @@
     </div>
     
     <div id="dice-section" class="section hidden">
-        <h2>Enter Your Dice Rolls</h2>
+        <h2>Enter Your Dice Rolls (Round <span id="dice-round-number">1</span>/3)</h2>
         <p>Enter the values of your 3 dice (1-6):</p>
         <input type="number" min="1" max="6" id="dice1">
         <input type="number" min="1" max="6" id="dice2">
@@ -118,22 +49,55 @@
     </div>
     
     <div id="waiting-results-section" class="section hidden">
-        <h2>Round Complete</h2>
+        <h2>Round <span id="waiting-round-number">1</span> Complete</h2>
         <p>Waiting for all players to finish and admin to calculate results...</p>
     </div>
     
     <div id="results-section" class="section hidden">
-        <h2>Round Results</h2>
+        <h2>Round <span id="results-round-number">1</span> Results</h2>
         <div id="results-container"></div>
-        <button id="play-again-btn">Ready for Next Round</button>
+        <button id="ready-next-btn" class="hidden">Ready for Next Round</button>
+    </div>
+    
+    <div id="final-results-section" class="section hidden">
+        <h2>Final Game Results</h2>
+        <div id="final-results-container"></div>
+        <button id="play-again-btn">Play Again</button>
     </div>
 
     <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCd2B_XrFV07tWrKwSzwaOpzW84yygVhjo",
+            authDomain: "comparison-650b2.firebaseapp.com",
+            databaseURL: "https://comparison-650b2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "comparison-650b2",
+            storageBucket: "comparison-650b2.appspot.com",
+            messagingSenderId: "389030420315",
+            appId: "1:389030420315:web:53c390a2fe93156f56047e",
+            measurementId: "G-N0EBD0YSJ0"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        // Database references
+        const gameRef = db.ref('games/comparison');
+        const playersRef = gameRef.child('players');
+        const choicesRef = gameRef.child('choices');
+        const diceRef = gameRef.child('dice');
+        const resultsRef = gameRef.child('results');
+        const roundsRef = gameRef.child('rounds');
+        const gameStateRef = gameRef.child('state');
+        
         // Player state
+        let playerId = '';
         let playerName = '';
         let playerChoice = '';
         let timeLeft = 30;
         let timerInterval;
+        let currentRound = 1;
         
         // DOM elements
         const registerSection = document.getElementById('register-section');
@@ -142,6 +106,7 @@
         const diceSection = document.getElementById('dice-section');
         const waitingResultsSection = document.getElementById('waiting-results-section');
         const resultsSection = document.getElementById('results-section');
+        const finalResultsSection = document.getElementById('final-results-section');
         const playerNameInput = document.getElementById('player-name');
         const registerBtn = document.getElementById('register-btn');
         const registerMessage = document.getElementById('register-message');
@@ -153,7 +118,13 @@
         const submitDiceBtn = document.getElementById('submit-dice');
         const diceMessage = document.getElementById('dice-message');
         const resultsContainer = document.getElementById('results-container');
+        const readyNextBtn = document.getElementById('ready-next-btn');
+        const finalResultsContainer = document.getElementById('final-results-container');
         const playAgainBtn = document.getElementById('play-again-btn');
+        const roundNumberDisplay = document.getElementById('round-number');
+        const diceRoundNumberDisplay = document.getElementById('dice-round-number');
+        const waitingRoundNumberDisplay = document.getElementById('waiting-round-number');
+        const resultsRoundNumberDisplay = document.getElementById('results-round-number');
         
         // Dice inputs
         const dice1 = document.getElementById('dice1');
@@ -169,28 +140,87 @@
                 return;
             }
             
+            // Generate a unique ID for the player
+            playerId = 'player_' + Math.random().toString(36).substr(2, 9);
             playerName = name;
-            registerMessage.textContent = `Registered as ${name}!`;
-            registerMessage.style.color = 'green';
             
-            // In a real app, this would send to server
-            setTimeout(() => {
+            // Register player in Firebase
+            playersRef.child(playerId).set({
+                name: playerName,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                registerMessage.textContent = `Registered as ${name}!`;
+                registerMessage.style.color = 'green';
+                
                 registerSection.classList.add('hidden');
                 waitingSection.classList.remove('hidden');
                 displayName.textContent = name;
                 
-                // Simulate admin starting game after 5 seconds
-                setTimeout(() => {
-                    statusMessage.textContent = 'Game starting! Make your choice...';
+                // Listen for game state changes
+                setupGameStateListener();
+            }).catch(error => {
+                registerMessage.textContent = 'Registration failed: ' + error.message;
+                registerMessage.style.color = 'red';
+            });
+        });
+        
+        // Set up game state listener
+        function setupGameStateListener() {
+            gameStateRef.on('value', (snapshot) => {
+                const state = snapshot.val() || {};
+                
+                if (state.status === 'choosing') {
+                    // New round starting
+                    currentRound = state.round || 1;
+                    roundNumberDisplay.textContent = currentRound;
+                    
                     waitingSection.classList.add('hidden');
                     choiceSection.classList.remove('hidden');
+                    statusMessage.textContent = 'Make your choice for this round!';
                     startTimer();
-                }, 5000);
-            }, 1000);
-        });
+                } else if (state.status === 'rolling') {
+                    // Dice rolling phase
+                    currentRound = state.round || 1;
+                    diceRoundNumberDisplay.textContent = currentRound;
+                    
+                    choiceSection.classList.add('hidden');
+                    diceSection.classList.remove('hidden');
+                } else if (state.status === 'results') {
+                    // Results available
+                    currentRound = state.round || 1;
+                    waitingRoundNumberDisplay.textContent = currentRound;
+                    resultsRoundNumberDisplay.textContent = currentRound;
+                    
+                    diceSection.classList.add('hidden');
+                    waitingResultsSection.classList.add('hidden');
+                    
+                    // Get results for this round
+                    roundsRef.child(`round${currentRound}`).once('value').then(snapshot => {
+                        const roundResults = snapshot.val() || {};
+                        const playerResult = roundResults[playerId];
+                        
+                        if (playerResult) {
+                            showRoundResults(roundResults);
+                        } else {
+                            waitingResultsSection.classList.remove('hidden');
+                        }
+                    });
+                } else if (state.status === 'finished') {
+                    // Game finished, show final results
+                    showFinalResults();
+                }
+            });
+        }
         
         // Start choice timer
         function startTimer() {
+            // Reset choice
+            playerChoice = '';
+            choiceMessage.textContent = '';
+            
+            // Clear any existing timer
+            clearInterval(timerInterval);
+            
             timeLeft = 30;
             timerDisplay.textContent = timeLeft;
             
@@ -204,8 +234,7 @@
                         // Auto-select a random choice if time runs out
                         const options = ['max', 'min', 'mid', 'zero'];
                         playerChoice = options[Math.floor(Math.random() * options.length)];
-                        choiceMessage.textContent = `Time's up! Auto-selected ${playerChoice.toUpperCase()}.`;
-                        setTimeout(proceedToDice, 2000);
+                        makeChoice(playerChoice);
                     }
                 }
             }, 1000);
@@ -222,19 +251,20 @@
             playerChoice = choice;
             choiceMessage.textContent = `You chose ${choice.toUpperCase()}!`;
             
-            // In a real app, this would send to server
-            setTimeout(proceedToDice, 2000);
-        }
-        
-        function proceedToDice() {
-            choiceSection.classList.add('hidden');
-            diceSection.classList.remove('hidden');
-            
-            // Set up dice total calculation
-            [dice1, dice2, dice3].forEach(dice => {
-                dice.addEventListener('change', updateDiceTotal);
+            // Save choice to Firebase
+            choicesRef.child(playerId).set(choice).then(() => {
+                // Wait for admin to start the round
+                choiceMessage.textContent += ' Waiting for other players...';
+            }).catch(error => {
+                choiceMessage.textContent = 'Error saving choice: ' + error.message;
+                choiceMessage.style.color = 'red';
             });
         }
+        
+        // Set up dice total calculation
+        [dice1, dice2, dice3].forEach(dice => {
+            dice.addEventListener('change', updateDiceTotal);
+        });
         
         function updateDiceTotal() {
             const total = parseInt(dice1.value || 0) + parseInt(dice2.value || 0) + parseInt(dice3.value || 0);
@@ -263,38 +293,39 @@
                 return;
             }
             
-            diceMessage.textContent = 'Dice submitted!';
-            diceMessage.style.color = 'green';
+            const total = d1 + d2 + d3;
             
-            // In a real app, this would send to server
-            setTimeout(() => {
+            // Save dice results to Firebase
+            diceRef.child(playerId).set({
+                dice: [d1, d2, d3],
+                total: total
+            }).then(() => {
+                diceMessage.textContent = 'Dice submitted! Waiting for results...';
+                diceMessage.style.color = 'green';
+                
                 diceSection.classList.add('hidden');
                 waitingResultsSection.classList.remove('hidden');
-                
-                // Simulate admin calculating results after 5 seconds
-                setTimeout(showResults, 5000);
-            }, 1000);
+            }).catch(error => {
+                diceMessage.textContent = 'Error submitting dice: ' + error.message;
+                diceMessage.style.color = 'red';
+            });
         });
         
-        function showResults() {
-            waitingResultsSection.classList.add('hidden');
-            resultsSection.classList.remove('hidden');
+        // Show round results
+        function showRoundResults(roundResults) {
+            const playerResult = roundResults[playerId];
+            const allPlayers = Object.values(roundResults);
             
-            // Simulated results - in a real app, this would come from server
-            const results = [
-                { rank: 1, name: 'Alice', total: 15, points: 6.0 },
-                { rank: 2, name: 'Bob', total: 12, points: 3.0 },
-                { rank: 3, name: playerName, total: 10, points: 1.0 },
-                { rank: 4, name: 'Diana', total: 8, points: 0.0 }
-            ];
-            
-            // Find current player in results
-            const playerResult = results.find(r => r.name === playerName);
+            // Sort players by rank
+            allPlayers.sort((a, b) => a.rank - b.rank);
             
             let html = `
                 <p>You placed ${playerResult.rank}${getOrdinalSuffix(playerResult.rank)} with a total of ${playerResult.total}!</p>
                 <p>You earned <strong>${playerResult.points.toFixed(1)} points</strong> this round.</p>
-                <table id="results-table">
+                ${playerResult.bonus > 0 ? `<p>Bonus: <strong>+${playerResult.bonus} points</strong> (${playerResult.bonusReason})</p>` : ''}
+                <p>Total this round: <strong>${playerResult.totalPoints.toFixed(1)} points</strong></p>
+                <h3>All Players:</h3>
+                <table>
                     <thead>
                         <tr>
                             <th>Rank</th>
@@ -306,21 +337,90 @@
                     <tbody>
             `;
             
-            results.forEach(result => {
+            allPlayers.forEach(player => {
                 html += `
-                    <tr ${result.name === playerName ? 'style="background-color: #f0f8ff;"' : ''}>
-                        <td>${result.rank}${getOrdinalSuffix(result.rank)}</td>
-                        <td>${result.name}</td>
-                        <td>${result.total}</td>
-                        <td>${result.points.toFixed(1)}</td>
+                    <tr ${player.name === playerResult.name ? 'style="background-color: #f0f8ff;"' : ''}>
+                        <td>${player.rank}${getOrdinalSuffix(player.rank)}</td>
+                        <td>${player.name} (${player.choice})</td>
+                        <td>${player.total}</td>
+                        <td>${player.totalPoints.toFixed(1)}</td>
                     </tr>
                 `;
             });
             
             html += `</tbody></table>`;
             resultsContainer.innerHTML = html;
+            
+            // Show ready button if not final round
+            if (currentRound < 3) {
+                readyNextBtn.classList.remove('hidden');
+            } else {
+                readyNextBtn.classList.add('hidden');
+            }
+            
+            waitingResultsSection.classList.add('hidden');
+            resultsSection.classList.remove('hidden');
         }
         
+        // Ready for next round button
+        readyNextBtn.addEventListener('click', () => {
+            // Reset for next round
+            playerChoice = '';
+            dice1.value = '';
+            dice2.value = '';
+            dice3.value = '';
+            diceTotal.textContent = '0';
+            
+            resultsSection.classList.add('hidden');
+            waitingSection.classList.remove('hidden');
+            statusMessage.textContent = 'Waiting for next round to start...';
+        });
+        
+        // Show final results
+        function showFinalResults() {
+            // Get all round results
+            roundsRef.once('value').then(snapshot => {
+                const allRounds = snapshot.val() || {};
+                let totalPoints = 0;
+                let totalBonus = 0;
+                
+                // Calculate player's total points across all rounds
+                for (const [roundKey, round] of Object.entries(allRounds)) {
+                    if (round[playerId]) {
+                        totalPoints += round[playerId].points;
+                        totalBonus += round[playerId].bonus;
+                    }
+                }
+                
+                // Display final results
+                finalResultsContainer.innerHTML = `
+                    <p>Game completed!</p>
+                    <p>Your total points: <strong>${totalPoints.toFixed(1)}</strong></p>
+                    <p>Your total bonus: <strong>${totalBonus.toFixed(1)}</strong></p>
+                    <p>Grand total: <strong>${(totalPoints + totalBonus).toFixed(1)}</strong></p>
+                `;
+                
+                resultsSection.classList.add('hidden');
+                finalResultsSection.classList.remove('hidden');
+            });
+        }
+        
+        // Play again button
+        playAgainBtn.addEventListener('click', () => {
+            // Reset player for new game
+            playerChoice = '';
+            dice1.value = '';
+            dice2.value = '';
+            dice3.value = '';
+            diceTotal.textContent = '0';
+            
+            finalResultsSection.classList.add('hidden');
+            registerSection.classList.remove('hidden');
+            playerNameInput.value = '';
+            registerMessage.textContent = '';
+        });
+        
+        // Helper function for ordinal suffixes
         function getOrdinalSuffix(num) {
             const j = num % 10;
             const k = num % 100;
@@ -335,20 +435,6 @@
             }
             return 'th';
         }
-        
-        // Play again button
-        playAgainBtn.addEventListener('click', () => {
-            // Reset for new round
-            playerChoice = '';
-            dice1.value = '';
-            dice2.value = '';
-            dice3.value = '';
-            diceTotal.textContent = '0';
-            
-            resultsSection.classList.add('hidden');
-            waitingSection.classList.remove('hidden');
-            statusMessage.textContent = 'Waiting for next round to start...';
-        });
     </script>
 </body>
 </html>
