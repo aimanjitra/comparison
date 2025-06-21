@@ -7,62 +7,485 @@
     <!-- Add the Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <!-- Add animate.css for animations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <style>
-        /* (Keep all the same CSS styles from previous player interface) */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --accent: #fd79a8;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #e17055;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        .game-section {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s ease;
+            transform: translateY(20px);
+        }
+        
+        .game-section.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+        
+        h1, h2, h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            margin: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .btn-accent {
+            background-color: var(--accent);
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .input-field {
+            padding: 12px 15px;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid var(--secondary);
+            border-radius: 50px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+        }
+        
+        .message {
+            margin: 15px 0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .message-success {
+            background-color: rgba(0, 184, 148, 0.2);
+            color: var(--success);
+        }
+        
+        .message-error {
+            background-color: rgba(225, 112, 85, 0.2);
+            color: var(--danger);
+        }
+        
+        .message-info {
+            background-color: rgba(162, 155, 254, 0.2);
+            color: var(--primary);
+        }
+        
+        /* Choice buttons */
+        .choice-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+        
+        .choice-btn {
+            width: 150px;
+            height: 150px;
+            margin: 15px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .choice-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .choice-btn i {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        #max-btn {
+            background: linear-gradient(135deg, #ff7675, #e84393);
+            color: white;
+        }
+        
+        #min-btn {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+        }
+        
+        #mid-btn {
+            background: linear-gradient(135deg, #55efc4, #00b894);
+            color: white;
+        }
+        
+        #zero-btn {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            color: var(--dark);
+        }
+        
+        /* Timer */
+        #timer-container {
+            width: 100px;
+            height: 100px;
+            margin: 20px auto;
+            position: relative;
+        }
+        
+        #timer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        /* Dice section */
+        .dice-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+        
+        .dice-input {
+            width: 80px;
+            height: 80px;
+            margin: 0 10px;
+            text-align: center;
+            font-size: 2rem;
+            border: 3px solid var(--secondary);
+            border-radius: 15px;
+            background-color: white;
+        }
+        
+        .dice-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        #dice-total {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 1rem 0;
+        }
+        
+        /* Results */
+        .results-table {
+            width: 100%;
+            max-width: 600px;
+            margin: 2rem auto;
+            border-collapse: collapse;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .results-table th, .results-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .results-table th {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .results-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .results-table tr.highlight {
+            background-color: rgba(108, 92, 231, 0.1);
+        }
+        
+        /* Progress bar */
+        .round-progress {
+            width: 100%;
+            max-width: 400px;
+            height: 10px;
+            background-color: #eee;
+            border-radius: 5px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        /* Confetti effect */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent);
+            opacity: 0;
+            z-index: 1000;
+            animation: confetti-fall 5s linear forwards;
+        }
+        
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .choice-btn {
+                width: 120px;
+                height: 120px;
+                font-size: 1.2rem;
+            }
+            
+            .dice-input {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+        }
     </style>
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <h1>Comparison Game</h1>
-    
-    <div id="register-section" class="section">
-        <h2>Register to Play</h2>
-        <input type="text" id="player-name" placeholder="Enter your name">
-        <button id="register-btn">Play Now</button>
-        <p id="register-message"></p>
-    </div>
-    
-    <div id="waiting-section" class="section hidden">
-        <h2>Welcome, <span id="display-name"></span>!</h2>
-        <p>Waiting for admin to start the game...</p>
-        <div id="status-message"></div>
-    </div>
-    
-    <div id="choice-section" class="section hidden">
-        <h2>Choose Your Strategy (Round <span id="round-number">1</span>/3)</h2>
-        <p>You have <span id="timer">30</span> seconds to choose:</p>
-        <button id="max-btn">MAX</button>
-        <button id="min-btn">MIN</button>
-        <button id="mid-btn">MID</button>
-        <button id="zero-btn">ZERO</button>
-        <p id="choice-message"></p>
-    </div>
-    
-    <div id="dice-section" class="section hidden">
-        <h2>Enter Your Dice Rolls (Round <span id="dice-round-number">1</span>/3)</h2>
-        <p>Enter the values of your 3 dice (1-6):</p>
-        <input type="number" min="1" max="6" id="dice1">
-        <input type="number" min="1" max="6" id="dice2">
-        <input type="number" min="1" max="6" id="dice3">
-        <p>Total: <span id="dice-total">0</span></p>
-        <button id="submit-dice">Submit</button>
-        <p id="dice-message"></p>
-    </div>
-    
-    <div id="waiting-results-section" class="section hidden">
-        <h2>Round <span id="waiting-round-number">1</span> Complete</h2>
-        <p>Waiting for all players to finish and admin to calculate results...</p>
-    </div>
-    
-    <div id="results-section" class="section hidden">
-        <h2>Round <span id="results-round-number">1</span> Results</h2>
-        <div id="results-container"></div>
-        <button id="ready-next-btn" class="hidden">Ready for Next Round</button>
-    </div>
-    
-    <div id="final-results-section" class="section hidden">
-        <h2>Final Game Results</h2>
-        <div id="final-results-container"></div>
-        <button id="play-again-btn">Play Again</button>
+    <div class="container">
+        <!-- Register Section -->
+        <section id="register-section" class="game-section animate__animated">
+            <h1>Comparison Game</h1>
+            <h2>Join the Fun!</h2>
+            <input type="text" id="player-name" class="input-field" placeholder="Enter your nickname">
+            <button id="register-btn" class="btn btn-primary">
+                <i class="fas fa-play"></i> Play Now
+            </button>
+            <p id="register-message" class="message"></p>
+        </section>
+        
+        <!-- Waiting Section -->
+        <section id="waiting-section" class="game-section animate__animated">
+            <h1>Welcome, <span id="display-name"></span>!</h1>
+            <div class="animate__animated animate__pulse animate__infinite" style="text-align: center;">
+                <i class="fas fa-users" style="font-size: 3rem; color: var(--secondary); margin-bottom: 1rem;"></i>
+                <p id="status-message" class="message message-info">Waiting for admin to start the game...</p>
+            </div>
+            <div class="round-progress">
+                <div class="progress-bar"></div>
+            </div>
+        </section>
+        
+        <!-- Choice Section -->
+        <section id="choice-section" class="game-section animate__animated">
+            <h2>Round <span id="round-number">1</span>/3</h2>
+            <h3>Choose Your Strategy</h3>
+            
+            <div id="timer-container">
+                <svg viewBox="0 0 100 100" style="transform: rotate(-90deg); width: 100%; height: 100%;">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#eee" stroke-width="8"></circle>
+                    <circle id="timer-circle" cx="50" cy="50" r="45" fill="none" stroke="var(--primary)" stroke-width="8" 
+                            stroke-dasharray="283" stroke-dashoffset="283"></circle>
+                </svg>
+                <div id="timer">30</div>
+            </div>
+            
+            <div class="choice-container">
+                <button id="max-btn" class="choice-btn animate__animated">
+                    <i class="fas fa-arrow-up"></i>
+                    MAX
+                </button>
+                <button id="min-btn" class="choice-btn animate__animated">
+                    <i class="fas fa-arrow-down"></i>
+                    MIN
+                </button>
+                <button id="mid-btn" class="choice-btn animate__animated">
+                    <i class="fas fa-arrows-alt-h"></i>
+                    MID
+                </button>
+                <button id="zero-btn" class="choice-btn animate__animated">
+                    <i class="fas fa-ban"></i>
+                    ZERO
+                </button>
+            </div>
+            
+            <p id="choice-message" class="message"></p>
+        </section>
+        
+        <!-- Dice Section -->
+        <section id="dice-section" class="game-section animate__animated">
+            <h2>Round <span id="dice-round-number">1</span>/3</h2>
+            <h3>Roll Your Dice!</h3>
+            
+            <div class="dice-container">
+                <input type="number" min="1" max="6" id="dice1" class="dice-input">
+                <input type="number" min="1" max="6" id="dice2" class="dice-input">
+                <input type="number" min="1" max="6" id="dice3" class="dice-input">
+            </div>
+            
+            <p>Total: <span id="dice-total">0</span></p>
+            
+            <button id="submit-dice" class="btn btn-success">
+                <i class="fas fa-check"></i> Submit Rolls
+            </button>
+            
+            <p id="dice-message" class="message"></p>
+        </section>
+        
+        <!-- Waiting Results Section -->
+        <section id="waiting-results-section" class="game-section animate__animated">
+            <h2>Round <span id="waiting-round-number">1</span> Complete!</h2>
+            <div class="animate__animated animate__pulse animate__infinite" style="text-align: center;">
+                <i class="fas fa-hourglass-half" style="font-size: 3rem; color: var(--secondary); margin-bottom: 1rem;"></i>
+                <p>Waiting for final results...</p>
+            </div>
+            <div class="round-progress">
+                <div class="progress-bar"></div>
+            </div>
+        </section>
+        
+        <!-- Results Section -->
+        <section id="results-section" class="game-section animate__animated">
+            <h2>Round <span id="results-round-number">1</span> Results</h2>
+            <div id="results-container" style="width: 100%;"></div>
+            <button id="ready-next-btn" class="btn btn-primary hidden">
+                <i class="fas fa-arrow-right"></i> Ready for Next Round
+            </button>
+        </section>
+        
+        <!-- Final Results Section -->
+        <section id="final-results-section" class="game-section animate__animated">
+            <h1>Game Over!</h1>
+            <h2>Final Results</h2>
+            <div id="final-results-container" style="width: 100%;"></div>
+            <button id="play-again-btn" class="btn btn-accent">
+                <i class="fas fa-redo"></i> Play Again
+            </button>
+        </section>
     </div>
 
     <script>
@@ -98,21 +521,26 @@
         let timeLeft = 30;
         let timerInterval;
         let currentRound = 1;
+        const maxRounds = 3;
         
         // DOM elements
-        const registerSection = document.getElementById('register-section');
-        const waitingSection = document.getElementById('waiting-section');
-        const choiceSection = document.getElementById('choice-section');
-        const diceSection = document.getElementById('dice-section');
-        const waitingResultsSection = document.getElementById('waiting-results-section');
-        const resultsSection = document.getElementById('results-section');
-        const finalResultsSection = document.getElementById('final-results-section');
+        const sections = {
+            register: document.getElementById('register-section'),
+            waiting: document.getElementById('waiting-section'),
+            choice: document.getElementById('choice-section'),
+            dice: document.getElementById('dice-section'),
+            waitingResults: document.getElementById('waiting-results-section'),
+            results: document.getElementById('results-section'),
+            finalResults: document.getElementById('final-results-section')
+        };
+        
         const playerNameInput = document.getElementById('player-name');
         const registerBtn = document.getElementById('register-btn');
         const registerMessage = document.getElementById('register-message');
         const displayName = document.getElementById('display-name');
         const statusMessage = document.getElementById('status-message');
         const timerDisplay = document.getElementById('timer');
+        const timerCircle = document.getElementById('timer-circle');
         const choiceMessage = document.getElementById('choice-message');
         const diceTotal = document.getElementById('dice-total');
         const submitDiceBtn = document.getElementById('submit-dice');
@@ -125,18 +553,71 @@
         const diceRoundNumberDisplay = document.getElementById('dice-round-number');
         const waitingRoundNumberDisplay = document.getElementById('waiting-round-number');
         const resultsRoundNumberDisplay = document.getElementById('results-round-number');
+        const progressBar = document.querySelector('.progress-bar');
         
         // Dice inputs
         const dice1 = document.getElementById('dice1');
         const dice2 = document.getElementById('dice2');
         const dice3 = document.getElementById('dice3');
         
+        // Choice buttons
+        const choiceBtns = {
+            max: document.getElementById('max-btn'),
+            min: document.getElementById('min-btn'),
+            mid: document.getElementById('mid-btn'),
+            zero: document.getElementById('zero-btn')
+        };
+        
+        // Show a specific section and hide others
+        function showSection(sectionId) {
+            // Add animation class to all sections
+            Object.values(sections).forEach(section => {
+                section.classList.remove('active');
+                section.classList.remove('animate__fadeIn');
+            });
+            
+            // Show the requested section with animation
+            setTimeout(() => {
+                sections[sectionId].classList.add('active');
+                sections[sectionId].classList.add('animate__fadeIn');
+                
+                // Update progress bar
+                if (sectionId === 'waiting' || sectionId === 'waitingResults') {
+                    const progress = (currentRound - 1) / maxRounds * 100;
+                    progressBar.style.width = `${progress}%`;
+                } else if (sectionId === 'results') {
+                    const progress = currentRound / maxRounds * 100;
+                    progressBar.style.width = `${progress}%`;
+                }
+            }, 50);
+        }
+        
+        // Create confetti effect
+        function createConfetti() {
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                confetti.style.width = `${Math.random() * 10 + 5}px`;
+                confetti.style.height = `${Math.random() * 10 + 5}px`;
+                confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                confetti.style.animationDelay = `${Math.random() * 2}s`;
+                document.body.appendChild(confetti);
+                
+                // Remove confetti after animation
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
+        
         // Register player
         registerBtn.addEventListener('click', () => {
             const name = playerNameInput.value.trim();
             if (name.length < 2) {
                 registerMessage.textContent = 'Please enter a name (at least 2 characters)';
-                registerMessage.style.color = 'red';
+                registerMessage.className = 'message message-error';
                 return;
             }
             
@@ -150,17 +631,21 @@
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
                 registerMessage.textContent = `Registered as ${name}!`;
-                registerMessage.style.color = 'green';
+                registerMessage.className = 'message message-success';
                 
-                registerSection.classList.add('hidden');
-                waitingSection.classList.remove('hidden');
-                displayName.textContent = name;
-                
-                // Listen for game state changes
-                setupGameStateListener();
+                // Animate button and transition to waiting section
+                registerBtn.classList.add('animate__pulse');
+                setTimeout(() => {
+                    registerBtn.classList.remove('animate__pulse');
+                    displayName.textContent = name;
+                    showSection('waiting');
+                    
+                    // Listen for game state changes
+                    setupGameStateListener();
+                }, 1000);
             }).catch(error => {
                 registerMessage.textContent = 'Registration failed: ' + error.message;
-                registerMessage.style.color = 'red';
+                registerMessage.className = 'message message-error';
             });
         });
         
@@ -174,8 +659,7 @@
                     currentRound = state.round || 1;
                     roundNumberDisplay.textContent = currentRound;
                     
-                    waitingSection.classList.add('hidden');
-                    choiceSection.classList.remove('hidden');
+                    showSection('choice');
                     statusMessage.textContent = 'Make your choice for this round!';
                     startTimer();
                 } else if (state.status === 'rolling') {
@@ -183,16 +667,12 @@
                     currentRound = state.round || 1;
                     diceRoundNumberDisplay.textContent = currentRound;
                     
-                    choiceSection.classList.add('hidden');
-                    diceSection.classList.remove('hidden');
+                    showSection('dice');
                 } else if (state.status === 'results') {
                     // Results available
                     currentRound = state.round || 1;
                     waitingRoundNumberDisplay.textContent = currentRound;
                     resultsRoundNumberDisplay.textContent = currentRound;
-                    
-                    diceSection.classList.add('hidden');
-                    waitingResultsSection.classList.add('hidden');
                     
                     // Get results for this round
                     roundsRef.child(`round${currentRound}`).once('value').then(snapshot => {
@@ -202,7 +682,7 @@
                         if (playerResult) {
                             showRoundResults(roundResults);
                         } else {
-                            waitingResultsSection.classList.remove('hidden');
+                            showSection('waitingResults');
                         }
                     });
                 } else if (state.status === 'finished') {
@@ -217,16 +697,50 @@
             // Reset choice
             playerChoice = '';
             choiceMessage.textContent = '';
+            choiceMessage.className = 'message';
+            
+            // Reset choice buttons animations
+            Object.values(choiceBtns).forEach(btn => {
+                btn.classList.remove('animate__tada');
+                btn.style.transform = '';
+                btn.style.boxShadow = '';
+            });
             
             // Clear any existing timer
             clearInterval(timerInterval);
             
             timeLeft = 30;
             timerDisplay.textContent = timeLeft;
+            timerCircle.style.strokeDashoffset = 283; // Full circle
+            
+            // Animate the timer circle
+            const circumference = 283;
+            const intervalTime = 50; // ms
+            const totalIntervals = (timeLeft * 1000) / intervalTime;
+            const dashOffsetPerInterval = circumference / totalIntervals;
+            
+            let currentOffset = circumference;
             
             timerInterval = setInterval(() => {
-                timeLeft--;
-                timerDisplay.textContent = timeLeft;
+                timeLeft -= intervalTime / 1000;
+                currentOffset -= dashOffsetPerInterval;
+                
+                timerDisplay.textContent = Math.ceil(timeLeft);
+                timerCircle.style.strokeDashoffset = currentOffset;
+                
+                // Change color when time is running out
+                if (timeLeft <= 10) {
+                    timerCircle.style.stroke = 'var(--danger)';
+                    timerDisplay.style.color = 'var(--danger)';
+                    
+                    // Add pulse animation to timer
+                    if (timeLeft % 1 < 0.1) {
+                        timerDisplay.classList.add('animate__pulse');
+                        setTimeout(() => {
+                            timerDisplay.classList.remove('animate__pulse');
+                        }, 300);
+                    }
+                }
                 
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
@@ -237,19 +751,40 @@
                         makeChoice(playerChoice);
                     }
                 }
-            }, 1000);
+            }, intervalTime);
         }
         
-        // Choice buttons
-        document.getElementById('max-btn').addEventListener('click', () => makeChoice('max'));
-        document.getElementById('min-btn').addEventListener('click', () => makeChoice('min'));
-        document.getElementById('mid-btn').addEventListener('click', () => makeChoice('mid'));
-        document.getElementById('zero-btn').addEventListener('click', () => makeChoice('zero'));
+        // Add click animations to choice buttons
+        Object.entries(choiceBtns).forEach(([choice, btn]) => {
+            btn.addEventListener('click', () => makeChoice(choice));
+            
+            // Add hover animations
+            btn.addEventListener('mouseenter', () => {
+                btn.classList.add('animate__pulse');
+            });
+            
+            btn.addEventListener('mouseleave', () => {
+                btn.classList.remove('animate__pulse');
+            });
+        });
         
         function makeChoice(choice) {
             clearInterval(timerInterval);
             playerChoice = choice;
+            
+            // Animate the selected button
+            choiceBtns[choice].classList.add('animate__tada');
+            
+            // Reset other buttons
+            Object.entries(choiceBtns).forEach(([c, btn]) => {
+                if (c !== choice) {
+                    btn.style.transform = 'scale(0.9)';
+                    btn.style.opacity = '0.6';
+                }
+            });
+            
             choiceMessage.textContent = `You chose ${choice.toUpperCase()}!`;
+            choiceMessage.className = 'message message-success';
             
             // Save choice to Firebase
             choicesRef.child(playerId).set(choice).then(() => {
@@ -257,18 +792,27 @@
                 choiceMessage.textContent += ' Waiting for other players...';
             }).catch(error => {
                 choiceMessage.textContent = 'Error saving choice: ' + error.message;
-                choiceMessage.style.color = 'red';
+                choiceMessage.className = 'message message-error';
             });
         }
         
         // Set up dice total calculation
         [dice1, dice2, dice3].forEach(dice => {
             dice.addEventListener('change', updateDiceTotal);
+            dice.addEventListener('focus', function() {
+                this.select();
+            });
         });
         
         function updateDiceTotal() {
             const total = parseInt(dice1.value || 0) + parseInt(dice2.value || 0) + parseInt(dice3.value || 0);
             diceTotal.textContent = total;
+            
+            // Animate total change
+            diceTotal.classList.add('animate__bounce');
+            setTimeout(() => {
+                diceTotal.classList.remove('animate__bounce');
+            }, 1000);
         }
         
         // Submit dice rolls
@@ -279,21 +823,24 @@
             
             if (isNaN(d1) || d1 < 1 || d1 > 6) {
                 diceMessage.textContent = 'Please enter a valid number (1-6) for Dice 1';
-                diceMessage.style.color = 'red';
+                diceMessage.className = 'message message-error';
                 return;
             }
             if (isNaN(d2) || d2 < 1 || d2 > 6) {
                 diceMessage.textContent = 'Please enter a valid number (1-6) for Dice 2';
-                diceMessage.style.color = 'red';
+                diceMessage.className = 'message message-error';
                 return;
             }
             if (isNaN(d3) || d3 < 1 || d3 > 6) {
                 diceMessage.textContent = 'Please enter a valid number (1-6) for Dice 3';
-                diceMessage.style.color = 'red';
+                diceMessage.className = 'message message-error';
                 return;
             }
             
             const total = d1 + d2 + d3;
+            
+            // Animate submission
+            submitDiceBtn.classList.add('animate__pulse');
             
             // Save dice results to Firebase
             diceRef.child(playerId).set({
@@ -301,13 +848,16 @@
                 total: total
             }).then(() => {
                 diceMessage.textContent = 'Dice submitted! Waiting for results...';
-                diceMessage.style.color = 'green';
+                diceMessage.className = 'message message-success';
                 
-                diceSection.classList.add('hidden');
-                waitingResultsSection.classList.remove('hidden');
+                setTimeout(() => {
+                    submitDiceBtn.classList.remove('animate__pulse');
+                    showSection('waitingResults');
+                }, 1000);
             }).catch(error => {
                 diceMessage.textContent = 'Error submitting dice: ' + error.message;
-                diceMessage.style.color = 'red';
+                diceMessage.className = 'message message-error';
+                submitDiceBtn.classList.remove('animate__pulse');
             });
         });
         
@@ -320,12 +870,15 @@
             allPlayers.sort((a, b) => a.rank - b.rank);
             
             let html = `
-                <p>You placed ${playerResult.rank}${getOrdinalSuffix(playerResult.rank)} with a total of ${playerResult.total}!</p>
-                <p>You earned <strong>${playerResult.points.toFixed(1)} points</strong> this round.</p>
-                ${playerResult.bonus > 0 ? `<p>Bonus: <strong>+${playerResult.bonus} points</strong> (${playerResult.bonusReason})</p>` : ''}
-                <p>Total this round: <strong>${playerResult.totalPoints.toFixed(1)} points</strong></p>
-                <h3>All Players:</h3>
-                <table>
+                <div class="message ${playerResult.bonus > 0 ? 'message-success' : 'message-info'}" style="margin-bottom: 2rem;">
+                    <h3>You placed ${playerResult.rank}${getOrdinalSuffix(playerResult.rank)}!</h3>
+                    <p>Total: <strong>${playerResult.total}</strong></p>
+                    <p>Points: <strong>${playerResult.points.toFixed(1)}</strong></p>
+                    ${playerResult.bonus > 0 ? `<p>Bonus: <strong>+${playerResult.bonus.toFixed(1)}</strong> (${playerResult.bonusReason})</p>` : ''}
+                    <p>Round Total: <strong>${playerResult.totalPoints.toFixed(1)} points</strong></p>
+                </div>
+                
+                <table class="results-table">
                     <thead>
                         <tr>
                             <th>Rank</th>
@@ -339,9 +892,9 @@
             
             allPlayers.forEach(player => {
                 html += `
-                    <tr ${player.name === playerResult.name ? 'style="background-color: #f0f8ff;"' : ''}>
+                    <tr ${player.name === playerResult.name ? 'class="highlight"' : ''}>
                         <td>${player.rank}${getOrdinalSuffix(player.rank)}</td>
-                        <td>${player.name} (${player.choice})</td>
+                        <td>${player.name} <small>(${player.choice})</small></td>
                         <td>${player.total}</td>
                         <td>${player.totalPoints.toFixed(1)}</td>
                     </tr>
@@ -351,15 +904,19 @@
             html += `</tbody></table>`;
             resultsContainer.innerHTML = html;
             
+            // Show confetti if player got a bonus
+            if (playerResult.bonus > 0) {
+                createConfetti();
+            }
+            
             // Show ready button if not final round
-            if (currentRound < 3) {
+            if (currentRound < maxRounds) {
                 readyNextBtn.classList.remove('hidden');
             } else {
                 readyNextBtn.classList.add('hidden');
             }
             
-            waitingResultsSection.classList.add('hidden');
-            resultsSection.classList.remove('hidden');
+            showSection('results');
         }
         
         // Ready for next round button
@@ -370,10 +927,16 @@
             dice2.value = '';
             dice3.value = '';
             diceTotal.textContent = '0';
+            diceMessage.textContent = '';
+            diceMessage.className = 'message';
             
-            resultsSection.classList.add('hidden');
-            waitingSection.classList.remove('hidden');
-            statusMessage.textContent = 'Waiting for next round to start...';
+            // Animate button click
+            readyNextBtn.classList.add('animate__pulse');
+            setTimeout(() => {
+                readyNextBtn.classList.remove('animate__pulse');
+                showSection('waiting');
+                statusMessage.textContent = 'Waiting for next round to start...';
+            }, 500);
         });
         
         // Show final results
@@ -394,14 +957,20 @@
                 
                 // Display final results
                 finalResultsContainer.innerHTML = `
-                    <p>Game completed!</p>
-                    <p>Your total points: <strong>${totalPoints.toFixed(1)}</strong></p>
-                    <p>Your total bonus: <strong>${totalBonus.toFixed(1)}</strong></p>
-                    <p>Grand total: <strong>${(totalPoints + totalBonus).toFixed(1)}</strong></p>
+                    <div class="message message-success" style="margin-bottom: 2rem;">
+                        <h3>Congratulations, ${playerName}!</h3>
+                        <p>Your total points: <strong>${totalPoints.toFixed(1)}</strong></p>
+                        <p>Your total bonus: <strong>${totalBonus.toFixed(1)}</strong></p>
+                        <p style="font-size: 1.5rem;">Grand total: <strong>${(totalPoints + totalBonus).toFixed(1)}</strong></p>
+                    </div>
                 `;
                 
-                resultsSection.classList.add('hidden');
-                finalResultsSection.classList.remove('hidden');
+                // Big confetti celebration
+                createConfetti();
+                setTimeout(createConfetti, 1000);
+                setTimeout(createConfetti, 1500);
+                
+                showSection('finalResults');
             });
         }
         
@@ -413,11 +982,17 @@
             dice2.value = '';
             dice3.value = '';
             diceTotal.textContent = '0';
+            progressBar.style.width = '0%';
             
-            finalResultsSection.classList.add('hidden');
-            registerSection.classList.remove('hidden');
-            playerNameInput.value = '';
-            registerMessage.textContent = '';
+            // Animate button click
+            playAgainBtn.classList.add('animate__pulse');
+            setTimeout(() => {
+                playAgainBtn.classList.remove('animate__pulse');
+                showSection('register');
+                playerNameInput.value = '';
+                registerMessage.textContent = '';
+                registerMessage.className = 'message';
+            }, 500);
         });
         
         // Helper function for ordinal suffixes
@@ -435,6 +1010,9 @@
             }
             return 'th';
         }
+        
+        // Initialize by showing register section
+        showSection('register');
     </script>
 </body>
 </html>
