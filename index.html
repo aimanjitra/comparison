@@ -4,60 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparison Game - Admin</title>
+    <!-- Add the Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .section {
-            margin-bottom: 30px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
-        }
-        h1, h2 {
-            color: #333;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        button {
-            padding: 8px 15px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        button:disabled {
-            background-color: #cccccc;
-        }
-        input {
-            padding: 6px;
-            margin-right: 10px;
-        }
-        .player-choice {
-            display: inline-block;
-            width: 100px;
-            font-weight: bold;
-        }
-        .max { color: red; }
-        .min { color: blue; }
-        .mid { color: green; }
-        .zero { color: orange; }
+        /* (Keep all the same CSS styles from previous admin interface) */
     </style>
 </head>
 <body>
@@ -84,7 +35,7 @@
     </div>
     
     <div class="section" id="choices-section" style="display: none;">
-        <h2>Player Choices</h2>
+        <h2>Player Choices (Round <span id="current-round">1</span>/3)</h2>
         <div id="choices-container">
             <table>
                 <thead>
@@ -125,7 +76,7 @@
     </div>
     
     <div class="section" id="results-section" style="display: none;">
-        <h2>Game Results</h2>
+        <h2>Round Results (Round <span id="results-round">1</span>/3)</h2>
         <div id="results-container">
             <table>
                 <thead>
@@ -134,6 +85,7 @@
                         <th>Player</th>
                         <th>Total</th>
                         <th>Points Earned</th>
+                        <th>Prediction Bonus</th>
                     </tr>
                 </thead>
                 <tbody id="results-list">
@@ -141,15 +93,63 @@
                 </tbody>
             </table>
         </div>
-        <button id="new-round-btn">Start New Round</button>
+        <button id="next-round-btn">Next Round</button>
         <button id="end-game-btn">End Game</button>
     </div>
 
+    <div class="section" id="final-results-section" style="display: none;">
+        <h2>Final Game Results</h2>
+        <div id="final-results-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Total Points</th>
+                        <th>Final Bonus</th>
+                        <th>Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody id="final-results-list">
+                    <!-- Final results will be populated here -->
+                </tbody>
+            </table>
+        </div>
+        <button id="new-game-btn">Start New Game</button>
+    </div>
+
     <script>
-        // Simulated data - in a real app, this would come from a server
-        let players = [];
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCd2B_XrFV07tWrKwSzwaOpzW84yygVhjo",
+            authDomain: "comparison-650b2.firebaseapp.com",
+            databaseURL: "https://comparison-650b2-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "comparison-650b2",
+            storageBucket: "comparison-650b2.appspot.com",
+            messagingSenderId: "389030420315",
+            appId: "1:389030420315:web:53c390a2fe93156f56047e",
+            measurementId: "G-N0EBD0YSJ0"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        // Database references
+        const gameRef = db.ref('games/comparison');
+        const playersRef = gameRef.child('players');
+        const choicesRef = gameRef.child('choices');
+        const diceRef = gameRef.child('dice');
+        const resultsRef = gameRef.child('results');
+        const roundsRef = gameRef.child('rounds');
+        const gameStateRef = gameRef.child('state');
+        
+        // Game state
+        let currentRound = 1;
+        const maxRounds = 3;
+        let players = {};
         let choices = {};
         let diceResults = {};
+        let roundResults = {};
         let gameActive = false;
         
         // DOM elements
@@ -161,47 +161,79 @@
         const calculateResultsBtn = document.getElementById('calculate-results-btn');
         const resultsList = document.getElementById('results-list');
         const minPlayersWarning = document.getElementById('min-players-warning');
+        const currentRoundDisplay = document.getElementById('current-round');
+        const resultsRoundDisplay = document.getElementById('results-round');
+        const finalResultsList = document.getElementById('final-results-list');
         
         // Sections
         const choicesSection = document.getElementById('choices-section');
         const diceSection = document.getElementById('dice-section');
         const resultsSection = document.getElementById('results-section');
+        const finalResultsSection = document.getElementById('final-results-section');
         
-        // Simulate player registration (in real app, this would be from websockets or polling)
-        function simulatePlayerRegistration() {
-            const samplePlayers = ['Alice', 'Bob', 'Charlie', 'Diana'];
+        // Listen for player registrations
+        playersRef.on('value', (snapshot) => {
+            players = snapshot.val() || {};
+            updatePlayersList();
             
-            samplePlayers.forEach((player, index) => {
-                setTimeout(() => {
-                    addPlayer(player);
-                    if (players.length >= 2) {
-                        startGameBtn.disabled = false;
-                        minPlayersWarning.style.color = 'green';
-                        minPlayersWarning.textContent = `Ready to start with ${players.length} players!`;
-                    }
-                }, index * 1500);
-            });
-        }
-        
-        // Add a new player
-        function addPlayer(name) {
-            if (!players.includes(name)) {
-                players.push(name);
-                updatePlayersList();
+            // Enable start game button if enough players
+            if (Object.keys(players).length >= 2) {
+                startGameBtn.disabled = false;
+                minPlayersWarning.style.color = 'green';
+                minPlayersWarning.textContent = `Ready to start with ${Object.keys(players).length} players!`;
+            } else {
+                startGameBtn.disabled = true;
+                minPlayersWarning.style.color = 'red';
+                minPlayersWarning.textContent = `At least 2 players needed to start (4 recommended)`;
             }
-        }
+        });
+        
+        // Listen for player choices
+        choicesRef.on('value', (snapshot) => {
+            choices = snapshot.val() || {};
+            updateChoicesList();
+            
+            // Check if all players have chosen
+            if (gameActive && Object.keys(choices).length === Object.keys(players).length) {
+                startRoundBtn.disabled = false;
+            }
+        });
+        
+        // Listen for dice submissions
+        diceRef.on('value', (snapshot) => {
+            diceResults = snapshot.val() || {};
+            
+            // Check if all players have submitted dice
+            if (gameActive && Object.keys(diceResults).length === Object.keys(players).length) {
+                calculateResultsBtn.disabled = false;
+            }
+        });
         
         // Update players list display
         function updatePlayersList() {
             playersList.innerHTML = '';
-            players.forEach(player => {
+            for (const [id, player] of Object.entries(players)) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${player}</td>
+                    <td>${player.name}</td>
                     <td>Registered</td>
                 `;
                 playersList.appendChild(row);
-            });
+            }
+        }
+        
+        // Update choices list display
+        function updateChoicesList() {
+            choicesList.innerHTML = '';
+            for (const [playerId, choice] of Object.entries(choices)) {
+                const playerName = players[playerId]?.name || playerId;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${playerName}</td>
+                    <td><span class="player-choice ${choice}">${choice.toUpperCase()}</span></td>
+                `;
+                choicesList.appendChild(row);
+            }
         }
         
         // Start the game
@@ -209,48 +241,31 @@
             gameActive = true;
             startGameBtn.disabled = true;
             choicesSection.style.display = 'block';
+            currentRoundDisplay.textContent = currentRound;
             
-            // Simulate players making choices
-            simulatePlayerChoices();
+            // Set game state to "choosing"
+            gameStateRef.set({
+                status: 'choosing',
+                round: currentRound
+            });
+            
+            // Clear previous choices and dice results
+            choicesRef.remove();
+            diceRef.remove();
         });
-        
-        // Simulate players making choices
-        function simulatePlayerChoices() {
-            const options = ['max', 'min', 'mid', 'zero'];
-            
-            players.forEach((player, index) => {
-                setTimeout(() => {
-                    const choice = options[Math.floor(Math.random() * options.length)];
-                    choices[player] = choice;
-                    updateChoicesList();
-                    
-                    // Check if all players have chosen
-                    if (Object.keys(choices).length === players.length) {
-                        startRoundBtn.disabled = false;
-                    }
-                }, index * 2000);
-            });
-        }
-        
-        // Update choices list display
-        function updateChoicesList() {
-            choicesList.innerHTML = '';
-            players.forEach(player => {
-                if (choices[player]) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${player}</td>
-                        <td><span class="player-choice ${choices[player]}">${choices[player].toUpperCase()}</span></td>
-                    `;
-                    choicesList.appendChild(row);
-                }
-            });
-        }
         
         // Start the round (dice input)
         startRoundBtn.addEventListener('click', () => {
             choicesSection.style.display = 'none';
             diceSection.style.display = 'block';
+            startRoundBtn.disabled = true;
+            
+            // Set game state to "rolling"
+            gameStateRef.set({
+                status: 'rolling',
+                round: currentRound
+            });
+            
             setupDiceInputs();
         });
         
@@ -258,15 +273,15 @@
         function setupDiceInputs() {
             diceList.innerHTML = '';
             
-            players.forEach((player, index) => {
+            for (const [playerId, player] of Object.entries(players)) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${player}</td>
-                    <td><input type="number" min="1" max="6" class="dice-1" data-player="${player}"></td>
-                    <td><input type="number" min="1" max="6" class="dice-2" data-player="${player}"></td>
-                    <td><input type="number" min="1" max="6" class="dice-3" data-player="${player}"></td>
-                    <td class="total" id="total-${player}">0</td>
-                    <td><button class="confirm-dice" data-player="${player}">Confirm</button></td>
+                    <td>${player.name}</td>
+                    <td><input type="number" min="1" max="6" class="dice-1" data-player="${playerId}"></td>
+                    <td><input type="number" min="1" max="6" class="dice-2" data-player="${playerId}"></td>
+                    <td><input type="number" min="1" max="6" class="dice-3" data-player="${playerId}"></td>
+                    <td class="total" id="total-${playerId}">0</td>
+                    <td><button class="confirm-dice" data-player="${playerId}">Confirm</button></td>
                 `;
                 diceList.appendChild(row);
                 
@@ -291,34 +306,32 @@
                     const dice2Val = parseInt(dice2.value);
                     const dice3Val = parseInt(dice3.value);
                     
-                    if (isNaN(dice1Val) {
-                        alert('Please enter a value for Dice 1');
+                    if (isNaN(dice1Val) || dice1Val < 1 || dice1Val > 6) {
+                        alert('Please enter a valid number (1-6) for Dice 1');
                         return;
                     }
-                    if (isNaN(dice2Val)) {
-                        alert('Please enter a value for Dice 2');
+                    if (isNaN(dice2Val) || dice2Val < 1 || dice2Val > 6) {
+                        alert('Please enter a valid number (1-6) for Dice 2');
                         return;
                     }
-                    if (isNaN(dice3Val)) {
-                        alert('Please enter a value for Dice 3');
+                    if (isNaN(dice3Val) || dice3Val < 1 || dice3Val > 6) {
+                        alert('Please enter a valid number (1-6) for Dice 3');
                         return;
                     }
                     
-                    diceResults[player] = {
+                    const total = dice1Val + dice2Val + dice3Val;
+                    
+                    // Save dice results to Firebase
+                    diceRef.child(playerId).set({
                         dice: [dice1Val, dice2Val, dice3Val],
-                        total: dice1Val + dice2Val + dice3Val
-                    };
+                        total: total
+                    });
                     
                     // Disable inputs for this player
                     dice1.disabled = true;
                     dice2.disabled = true;
                     dice3.disabled = true;
                     confirmBtn.disabled = true;
-                    
-                    // Check if all players have confirmed
-                    if (Object.keys(diceResults).length === players.length) {
-                        calculateResultsBtn.disabled = false;
-                    }
                 });
             });
         }
@@ -327,35 +340,43 @@
         calculateResultsBtn.addEventListener('click', () => {
             diceSection.style.display = 'none';
             resultsSection.style.display = 'block';
+            resultsRoundDisplay.textContent = currentRound;
+            calculateResultsBtn.disabled = true;
+            
             calculateResults();
         });
         
         // Calculate and display results
         function calculateResults() {
-            // Create array of players with their totals
-            const playerTotals = players.map(player => ({
-                name: player,
-                total: diceResults[player].total,
-                choice: choices[player]
-            }));
+            // Create array of players with their totals and choices
+            const playerData = [];
+            
+            for (const [playerId, player] of Object.entries(players)) {
+                playerData.push({
+                    id: playerId,
+                    name: player.name,
+                    total: diceResults[playerId]?.total || 0,
+                    choice: choices[playerId] || 'none'
+                });
+            }
             
             // Sort by total (descending)
-            playerTotals.sort((a, b) => b.total - a.total);
+            playerData.sort((a, b) => b.total - a.total);
             
             // Assign ranks (handling ties)
             let currentRank = 1;
-            for (let i = 0; i < playerTotals.length; i++) {
-                if (i > 0 && playerTotals[i].total === playerTotals[i - 1].total) {
-                    playerTotals[i].rank = playerTotals[i - 1].rank;
+            for (let i = 0; i < playerData.length; i++) {
+                if (i > 0 && playerData[i].total === playerData[i - 1].total) {
+                    playerData[i].rank = playerData[i - 1].rank;
                 } else {
-                    playerTotals[i].rank = currentRank;
+                    playerData[i].rank = currentRank;
                 }
                 currentRank++;
             }
             
             // Calculate points based on ranks
             const rankGroups = {};
-            playerTotals.forEach(player => {
+            playerData.forEach(player => {
                 if (!rankGroups[player.rank]) {
                     rankGroups[player.rank] = [];
                 }
@@ -390,51 +411,179 @@
                 const pointsPerPlayer = totalPoints / playersInRank.length;
                 
                 playersInRank.forEach(player => {
+                    // Check for prediction bonuses
+                    let bonus = 0;
+                    let bonusReason = '';
+                    
+                    if (player.choice === 'max' && player.rank === 1) {
+                        bonus = pointsPerPlayer; // Double points
+                        bonusReason = 'Correct MAX prediction';
+                    } else if (player.choice === 'min' && player.rank === playerData.length) {
+                        bonus = pointsPerPlayer; // Double points
+                        bonusReason = 'Correct MIN prediction';
+                    } else if (player.choice === 'mid') {
+                        // Check if player is in the middle (not first or last)
+                        if (player.rank > 1 && player.rank < playerData.length) {
+                            bonus = pointsPerPlayer; // Double points
+                            bonusReason = 'Correct MID prediction';
+                        }
+                    } else if (player.choice === 'zero' && pointsPerPlayer === 0) {
+                        bonus = 45; // Special zero bonus
+                        bonusReason = 'ZERO bonus';
+                    }
+                    
                     player.points = pointsPerPlayer;
+                    player.bonus = bonus;
+                    player.bonusReason = bonusReason;
+                    player.totalPoints = pointsPerPlayer + bonus;
                     player.pointPositions = pointPositions.join(', ');
                 });
             });
             
+            // Save round results to Firebase
+            const roundResults = {};
+            playerData.forEach(player => {
+                roundResults[player.id] = {
+                    name: player.name,
+                    rank: player.rank,
+                    total: player.total,
+                    points: player.points,
+                    bonus: player.bonus,
+                    totalPoints: player.totalPoints,
+                    choice: player.choice,
+                    bonusReason: player.bonusReason
+                };
+            });
+            
+            roundsRef.child(`round${currentRound}`).set(roundResults);
+            
             // Display results
             resultsList.innerHTML = '';
-            playerTotals.forEach(player => {
+            playerData.forEach(player => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${player.rank}</td>
                     <td>${player.name} (${player.choice})</td>
                     <td>${player.total}</td>
-                    <td>${player.points.toFixed(1)} (from positions ${player.pointPositions})</td>
+                    <td>${player.points.toFixed(1)}</td>
+                    <td>${player.bonus > 0 ? `${player.bonus} (${player.bonusReason})` : 'None'}</td>
                 `;
                 resultsList.appendChild(row);
             });
+            
+            // Set game state to "results"
+            gameStateRef.set({
+                status: 'results',
+                round: currentRound
+            });
         }
         
-        // New round button
-        document.getElementById('new-round-btn').addEventListener('click', () => {
-            // Reset choices and dice results
-            choices = {};
-            diceResults = {};
+        // Next round button
+        document.getElementById('next-round-btn').addEventListener('click', () => {
+            currentRound++;
             
-            // Hide results, show choices section
-            resultsSection.style.display = 'none';
-            choicesSection.style.display = 'block';
-            
-            // Reset buttons
-            startRoundBtn.disabled = true;
-            calculateResultsBtn.disabled = true;
-            
-            // Simulate new choices
-            simulatePlayerChoices();
+            if (currentRound <= maxRounds) {
+                // Prepare for next round
+                resultsSection.style.display = 'none';
+                choicesSection.style.display = 'block';
+                currentRoundDisplay.textContent = currentRound;
+                
+                // Clear previous choices and dice results
+                choicesRef.remove();
+                diceRef.remove();
+                
+                // Set game state to "choosing"
+                gameStateRef.set({
+                    status: 'choosing',
+                    round: currentRound
+                });
+            } else {
+                // Game is over, show final results
+                showFinalResults();
+            }
         });
+        
+        // Show final results after all rounds
+        function showFinalResults() {
+            resultsSection.style.display = 'none';
+            finalResultsSection.style.display = 'block';
+            
+            // Calculate total points across all rounds
+            roundsRef.once('value').then(snapshot => {
+                const allRounds = snapshot.val() || {};
+                const playerTotals = {};
+                
+                // Sum points across all rounds for each player
+                for (const [roundKey, round] of Object.entries(allRounds)) {
+                    for (const [playerId, player] of Object.entries(round)) {
+                        if (!playerTotals[playerId]) {
+                            playerTotals[playerId] = {
+                                name: player.name,
+                                totalPoints: 0,
+                                totalBonus: 0
+                            };
+                        }
+                        playerTotals[playerId].totalPoints += player.points;
+                        playerTotals[playerId].totalBonus += player.bonus;
+                    }
+                }
+                
+                // Display final results
+                finalResultsList.innerHTML = '';
+                for (const [playerId, player] of Object.entries(playerTotals)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${player.name}</td>
+                        <td>${player.totalPoints.toFixed(1)}</td>
+                        <td>${player.totalBonus.toFixed(1)}</td>
+                        <td><strong>${(player.totalPoints + player.totalBonus).toFixed(1)}</strong></td>
+                    `;
+                    finalResultsList.appendChild(row);
+                }
+                
+                // Set game state to "finished"
+                gameStateRef.set({
+                    status: 'finished',
+                    round: 'final'
+                });
+            });
+        }
         
         // End game button
         document.getElementById('end-game-btn').addEventListener('click', () => {
-            alert('Game ended. Returning to registration.');
-            location.reload();
+            if (confirm('Are you sure you want to end the game early?')) {
+                showFinalResults();
+            }
         });
         
-        // Start simulation
-        simulatePlayerRegistration();
+        // New game button
+        document.getElementById('new-game-btn').addEventListener('click', () => {
+            if (confirm('Start a new game? All current data will be reset.')) {
+                // Reset game state
+                currentRound = 1;
+                gameActive = false;
+                
+                // Clear all game data
+                gameRef.remove();
+                
+                // Hide all sections except registration
+                choicesSection.style.display = 'none';
+                diceSection.style.display = 'none';
+                resultsSection.style.display = 'none';
+                finalResultsSection.style.display = 'none';
+                
+                // Reset buttons
+                startGameBtn.disabled = true;
+                startRoundBtn.disabled = true;
+                calculateResultsBtn.disabled = true;
+                
+                // Reset displays
+                currentRoundDisplay.textContent = currentRound;
+                resultsRoundDisplay.textContent = currentRound;
+                minPlayersWarning.style.color = 'red';
+                minPlayersWarning.textContent = 'At least 2 players needed to start (4 recommended)';
+            }
+        });
     </script>
 </body>
 </html>
