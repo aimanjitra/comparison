@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparison Game - Player</title>
-    <!-- Add the Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
-    <!-- Add animate.css for animations -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-        
         :root {
             --primary: #6c5ce7;
             --secondary: #a29bfe;
@@ -22,29 +19,29 @@
             --warning: #fdcb6e;
             --danger: #e17055;
         }
-        
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
-            font-family: 'Poppins', sans-serif;
             background-color: var(--light);
             color: var(--dark);
             min-height: 100vh;
             overflow-x: hidden;
         }
-        
-        .container {
+
+        .game-container {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             position: relative;
             min-height: 100vh;
         }
-        
+
         .game-section {
             position: absolute;
             top: 0;
@@ -61,32 +58,32 @@
             transition: all 0.5s ease;
             transform: translateY(20px);
         }
-        
+
         .game-section.active {
             opacity: 1;
             pointer-events: all;
             transform: translateY(0);
         }
-        
-        h1, h2, h3 {
-            color: var(--primary);
-            margin-bottom: 1rem;
+
+        .header {
             text-align: center;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
             margin-bottom: 2rem;
+        }
+
+        .title {
+            font-size: 2.5rem;
             background: linear-gradient(45deg, var(--primary), var(--accent));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            margin-bottom: 0.5rem;
         }
-        
-        h2 {
-            font-size: 1.8rem;
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--dark);
         }
-        
+
         .btn {
             padding: 12px 24px;
             margin: 10px;
@@ -98,46 +95,17 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        
+
         .btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
         }
-        
-        .btn:active {
-            transform: translateY(1px);
-        }
-        
+
         .btn-primary {
             background-color: var(--primary);
             color: white;
         }
-        
-        .btn-secondary {
-            background-color: var(--secondary);
-            color: white;
-        }
-        
-        .btn-accent {
-            background-color: var(--accent);
-            color: white;
-        }
-        
-        .btn-success {
-            background-color: var(--success);
-            color: white;
-        }
-        
-        .btn-warning {
-            background-color: var(--warning);
-            color: var(--dark);
-        }
-        
-        .btn-danger {
-            background-color: var(--danger);
-            color: white;
-        }
-        
+
         .input-field {
             padding: 12px 15px;
             margin: 10px 0;
@@ -146,45 +114,27 @@
             border: 2px solid var(--secondary);
             border-radius: 50px;
             font-size: 1rem;
-            transition: all 0.3s ease;
         }
-        
-        .input-field:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
-        }
-        
+
         .message {
             margin: 15px 0;
             padding: 10px 15px;
             border-radius: 8px;
             text-align: center;
         }
-        
+
         .message-success {
             background-color: rgba(0, 184, 148, 0.2);
             color: var(--success);
         }
-        
-        .message-error {
-            background-color: rgba(225, 112, 85, 0.2);
-            color: var(--danger);
-        }
-        
-        .message-info {
-            background-color: rgba(162, 155, 254, 0.2);
-            color: var(--primary);
-        }
-        
-        /* Choice buttons */
+
         .choice-container {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             margin: 2rem 0;
         }
-        
+
         .choice-btn {
             width: 150px;
             height: 150px;
@@ -198,63 +148,29 @@
             font-size: 1.5rem;
             transition: all 0.3s ease;
             box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
         }
-        
+
         .choice-btn:hover {
             transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
         }
-        
+
         .choice-btn i {
             font-size: 3rem;
             margin-bottom: 10px;
         }
-        
-        #max-btn {
-            background: linear-gradient(135deg, #ff7675, #e84393);
-            color: white;
-        }
-        
-        #min-btn {
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-            color: white;
-        }
-        
-        #mid-btn {
-            background: linear-gradient(135deg, #55efc4, #00b894);
-            color: white;
-        }
-        
-        #zero-btn {
-            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
-            color: var(--dark);
-        }
-        
-        /* Timer */
-        #timer-container {
-            width: 100px;
-            height: 100px;
-            margin: 20px auto;
-            position: relative;
-        }
-        
-        #timer {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        /* Dice section */
+
+        #max-btn { background: linear-gradient(135deg, #ff7675, #e84393); color: white; }
+        #min-btn { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; }
+        #mid-btn { background: linear-gradient(135deg, #55efc4, #00b894); color: white; }
+        #zero-btn { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); color: var(--dark); }
+
         .dice-container {
             display: flex;
             justify-content: center;
             margin: 2rem 0;
         }
-        
+
         .dice-input {
             width: 80px;
             height: 80px;
@@ -263,71 +179,30 @@
             font-size: 2rem;
             border: 3px solid var(--secondary);
             border-radius: 15px;
-            background-color: white;
         }
-        
-        .dice-input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-        
-        #dice-total {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
+
+        .round-tracker {
+            display: flex;
+            justify-content: center;
             margin: 1rem 0;
         }
-        
-        /* Results */
-        .results-table {
-            width: 100%;
-            max-width: 600px;
-            margin: 2rem auto;
-            border-collapse: collapse;
-            background-color: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+
+        .round-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 5px;
+            background-color: var(--secondary);
         }
-        
-        .results-table th, .results-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .results-table th {
+
+        .round-dot.active {
             background-color: var(--primary);
-            color: white;
         }
-        
-        .results-table tr:last-child td {
-            border-bottom: none;
+
+        .round-dot.completed {
+            background-color: var(--success);
         }
-        
-        .results-table tr.highlight {
-            background-color: rgba(108, 92, 231, 0.1);
-        }
-        
-        /* Progress bar */
-        .round-progress {
-            width: 100%;
-            max-width: 400px;
-            height: 10px;
-            background-color: #eee;
-            border-radius: 5px;
-            margin: 20px auto;
-            overflow: hidden;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            width: 0%;
-            transition: width 0.5s ease;
-        }
-        
-        /* Confetti effect */
+
         .confetti {
             position: fixed;
             width: 10px;
@@ -337,152 +212,181 @@
             z-index: 1000;
             animation: confetti-fall 5s linear forwards;
         }
-        
-        @keyframes confetti-fall {
-            0% {
-                transform: translateY(-100vh) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(100vh) rotate(360deg);
-                opacity: 0;
-            }
+
+        .bonus-info {
+            background: rgba(108, 92, 231, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 500px;
         }
         
-        /* Responsive adjustments */
+        .bonus-info h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .final-score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .results-table {
+            width: 100%;
+            max-width: 500px;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-table th, .results-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-table th {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .results-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .results-table tr.highlight {
+            background-color: rgba(108, 92, 231, 0.1);
+        }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+
         @media (max-width: 600px) {
-            h1 {
-                font-size: 2rem;
-            }
-            
-            h2 {
-                font-size: 1.5rem;
-            }
-            
-            .choice-btn {
-                width: 120px;
-                height: 120px;
-                font-size: 1.2rem;
-            }
-            
-            .dice-input {
-                width: 60px;
-                height: 60px;
-                font-size: 1.5rem;
-            }
+            .title { font-size: 2rem; }
+            .choice-btn { width: 120px; height: 120px; font-size: 1.2rem; }
+            .dice-input { width: 60px; height: 60px; font-size: 1.5rem; }
         }
     </style>
-    <!-- Add Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <div class="container">
+    <div class="game-container">
         <!-- Register Section -->
-        <section id="register-section" class="game-section animate__animated">
-            <h1>Comparison Game</h1>
-            <h2>Join the Fun!</h2>
+        <section id="register-section" class="game-section">
+            <div class="header">
+                <h1 class="title">Comparison Game</h1>
+                <p class="subtitle">Test your prediction skills across 3 rounds!</p>
+            </div>
             <input type="text" id="player-name" class="input-field" placeholder="Enter your nickname">
             <button id="register-btn" class="btn btn-primary">
-                <i class="fas fa-play"></i> Play Now
+                <i class="fas fa-play"></i> Join Game
             </button>
             <p id="register-message" class="message"></p>
         </section>
-        
-        <!-- Waiting Section -->
-        <section id="waiting-section" class="game-section animate__animated">
-            <h1>Welcome, <span id="display-name"></span>!</h1>
-            <div class="animate__animated animate__pulse animate__infinite" style="text-align: center;">
-                <i class="fas fa-users" style="font-size: 3rem; color: var(--secondary); margin-bottom: 1rem;"></i>
-                <p id="status-message" class="message message-info">Waiting for admin to start the game...</p>
+
+        <!-- Strategy Section -->
+        <section id="strategy-section" class="game-section">
+            <div class="header">
+                <h1 class="title">Choose Your Strategy</h1>
+                <p class="subtitle">This choice will apply to all 3 rounds</p>
             </div>
-            <div class="round-progress">
-                <div class="progress-bar"></div>
-            </div>
-        </section>
-        
-        <!-- Choice Section -->
-        <section id="choice-section" class="game-section animate__animated">
-            <h2>Round <span id="round-number">1</span>/3</h2>
-            <h3>Choose Your Strategy</h3>
-            
-            <div id="timer-container">
-                <svg viewBox="0 0 100 100" style="transform: rotate(-90deg); width: 100%; height: 100%;">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#eee" stroke-width="8"></circle>
-                    <circle id="timer-circle" cx="50" cy="50" r="45" fill="none" stroke="var(--primary)" stroke-width="8" 
-                            stroke-dasharray="283" stroke-dashoffset="283"></circle>
-                </svg>
-                <div id="timer">30</div>
-            </div>
-            
             <div class="choice-container">
-                <button id="max-btn" class="choice-btn animate__animated">
+                <div id="max-btn" class="choice-btn">
                     <i class="fas fa-arrow-up"></i>
                     MAX
-                </button>
-                <button id="min-btn" class="choice-btn animate__animated">
+                </div>
+                <div id="min-btn" class="choice-btn">
                     <i class="fas fa-arrow-down"></i>
                     MIN
-                </button>
-                <button id="mid-btn" class="choice-btn animate__animated">
+                </div>
+                <div id="mid-btn" class="choice-btn">
                     <i class="fas fa-arrows-alt-h"></i>
                     MID
-                </button>
-                <button id="zero-btn" class="choice-btn animate__animated">
+                </div>
+                <div id="zero-btn" class="choice-btn">
                     <i class="fas fa-ban"></i>
                     ZERO
-                </button>
+                </div>
             </div>
-            
             <p id="choice-message" class="message"></p>
         </section>
-        
+
+        <!-- Waiting Section -->
+        <section id="waiting-section" class="game-section">
+            <div class="header">
+                <h1 class="title">Welcome, <span id="display-name"></span>!</h1>
+                <p class="subtitle">Waiting for game to start</p>
+            </div>
+            <div class="round-tracker">
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
+            </div>
+            <div class="animate__animated animate__pulse animate__infinite" style="text-align: center;">
+                <i class="fas fa-users" style="font-size: 3rem; color: var(--secondary);"></i>
+                <p id="status-message" class="message">Waiting for admin to begin round 1...</p>
+            </div>
+        </section>
+
         <!-- Dice Section -->
-        <section id="dice-section" class="game-section animate__animated">
-            <h2>Round <span id="dice-round-number">1</span>/3</h2>
-            <h3>Roll Your Dice!</h3>
-            
+        <section id="dice-section" class="game-section">
+            <div class="header">
+                <h1 class="title">Round <span id="round-number">1</span></h1>
+                <p class="subtitle">Enter your dice rolls</p>
+            </div>
+            <div class="round-tracker">
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
+            </div>
             <div class="dice-container">
                 <input type="number" min="1" max="6" id="dice1" class="dice-input">
                 <input type="number" min="1" max="6" id="dice2" class="dice-input">
                 <input type="number" min="1" max="6" id="dice3" class="dice-input">
             </div>
-            
-            <p>Total: <span id="dice-total">0</span></p>
-            
-            <button id="submit-dice" class="btn btn-success">
+            <p>Total: <span id="dice-total" style="font-size: 1.5rem; font-weight: bold;">0</span></p>
+            <button id="submit-dice" class="btn btn-primary">
                 <i class="fas fa-check"></i> Submit Rolls
             </button>
-            
             <p id="dice-message" class="message"></p>
         </section>
-        
-        <!-- Waiting Results Section -->
-        <section id="waiting-results-section" class="game-section animate__animated">
-            <h2>Round <span id="waiting-round-number">1</span> Complete!</h2>
-            <div class="animate__animated animate__pulse animate__infinite" style="text-align: center;">
-                <i class="fas fa-hourglass-half" style="font-size: 3rem; color: var(--secondary); margin-bottom: 1rem;"></i>
-                <p>Waiting for final results...</p>
+
+        <!-- Round Results Section -->
+        <section id="results-section" class="game-section">
+            <div class="header">
+                <h1 class="title">Round <span id="results-round-number">1</span> Complete</h1>
+                <p class="subtitle">Your current standings</p>
             </div>
-            <div class="round-progress">
-                <div class="progress-bar"></div>
+            <div class="round-tracker">
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
             </div>
-        </section>
-        
-        <!-- Results Section -->
-        <section id="results-section" class="game-section animate__animated">
-            <h2>Round <span id="results-round-number">1</span> Results</h2>
             <div id="results-container" style="width: 100%;"></div>
-            <button id="ready-next-btn" class="btn btn-primary hidden">
-                <i class="fas fa-arrow-right"></i> Ready for Next Round
+            <button id="continue-btn" class="btn btn-primary">
+                <i class="fas fa-arrow-right"></i> Continue
             </button>
         </section>
-        
+
         <!-- Final Results Section -->
-        <section id="final-results-section" class="game-section animate__animated">
-            <h1>Game Over!</h1>
-            <h2>Final Results</h2>
-            <div id="final-results-container" style="width: 100%;"></div>
-            <button id="play-again-btn" class="btn btn-accent">
+        <section id="final-results-section" class="game-section">
+            <div class="header">
+                <h1 class="title">Game Complete!</h1>
+                <p class="subtitle">Your final results</p>
+            </div>
+            <div id="final-results-container"></div>
+            <div id="strategy-reveal" class="bonus-info"></div>
+            <div id="bonus-calculation" class="bonus-info"></div>
+            <div id="final-score" class="final-score"></div>
+            <button id="play-again-btn" class="btn btn-primary">
                 <i class="fas fa-redo"></i> Play Again
             </button>
         </section>
@@ -501,37 +405,25 @@
             measurementId: "G-N0EBD0YSJ0"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
-        // Database references
-        const gameRef = db.ref('games/comparison');
-        const playersRef = gameRef.child('players');
-        const choicesRef = gameRef.child('choices');
-        const diceRef = gameRef.child('dice');
-        const resultsRef = gameRef.child('results');
-        const roundsRef = gameRef.child('rounds');
-        const gameStateRef = gameRef.child('state');
-        
-        // Player state
+        // Game state
         let playerId = '';
         let playerName = '';
         let playerChoice = '';
-        let timeLeft = 30;
-        let timerInterval;
         let currentRound = 1;
-        const maxRounds = 3;
+        let roundResults = {};
+        let playerStrategy = '';
         
         // DOM elements
         const sections = {
             register: document.getElementById('register-section'),
+            strategy: document.getElementById('strategy-section'),
             waiting: document.getElementById('waiting-section'),
-            choice: document.getElementById('choice-section'),
             dice: document.getElementById('dice-section'),
-            waitingResults: document.getElementById('waiting-results-section'),
             results: document.getElementById('results-section'),
-            finalResults: document.getElementById('final-results-section')
+            final: document.getElementById('final-results-section')
         };
         
         const playerNameInput = document.getElementById('player-name');
@@ -539,26 +431,22 @@
         const registerMessage = document.getElementById('register-message');
         const displayName = document.getElementById('display-name');
         const statusMessage = document.getElementById('status-message');
-        const timerDisplay = document.getElementById('timer');
-        const timerCircle = document.getElementById('timer-circle');
-        const choiceMessage = document.getElementById('choice-message');
+        const roundNumberDisplay = document.getElementById('round-number');
+        const resultsRoundNumberDisplay = document.getElementById('results-round-number');
+        const dice1 = document.getElementById('dice1');
+        const dice2 = document.getElementById('dice2');
+        const dice3 = document.getElementById('dice3');
         const diceTotal = document.getElementById('dice-total');
         const submitDiceBtn = document.getElementById('submit-dice');
         const diceMessage = document.getElementById('dice-message');
         const resultsContainer = document.getElementById('results-container');
-        const readyNextBtn = document.getElementById('ready-next-btn');
         const finalResultsContainer = document.getElementById('final-results-container');
+        const strategyReveal = document.getElementById('strategy-reveal');
+        const bonusCalculation = document.getElementById('bonus-calculation');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const continueBtn = document.getElementById('continue-btn');
         const playAgainBtn = document.getElementById('play-again-btn');
-        const roundNumberDisplay = document.getElementById('round-number');
-        const diceRoundNumberDisplay = document.getElementById('dice-round-number');
-        const waitingRoundNumberDisplay = document.getElementById('waiting-round-number');
-        const resultsRoundNumberDisplay = document.getElementById('results-round-number');
-        const progressBar = document.querySelector('.progress-bar');
-        
-        // Dice inputs
-        const dice1 = document.getElementById('dice1');
-        const dice2 = document.getElementById('dice2');
-        const dice3 = document.getElementById('dice3');
+        const roundDots = document.querySelectorAll('.round-dot');
         
         // Choice buttons
         const choiceBtns = {
@@ -568,28 +456,25 @@
             zero: document.getElementById('zero-btn')
         };
         
-        // Show a specific section and hide others
+        // Show a specific section
         function showSection(sectionId) {
-            // Add animation class to all sections
             Object.values(sections).forEach(section => {
                 section.classList.remove('active');
-                section.classList.remove('animate__fadeIn');
             });
-            
-            // Show the requested section with animation
-            setTimeout(() => {
-                sections[sectionId].classList.add('active');
-                sections[sectionId].classList.add('animate__fadeIn');
-                
-                // Update progress bar
-                if (sectionId === 'waiting' || sectionId === 'waitingResults') {
-                    const progress = (currentRound - 1) / maxRounds * 100;
-                    progressBar.style.width = `${progress}%`;
-                } else if (sectionId === 'results') {
-                    const progress = currentRound / maxRounds * 100;
-                    progressBar.style.width = `${progress}%`;
+            sections[sectionId].classList.add('active');
+            updateRoundDots();
+        }
+        
+        // Update round tracker dots
+        function updateRoundDots() {
+            roundDots.forEach((dot, index) => {
+                dot.classList.remove('active', 'completed');
+                if (index + 1 === currentRound && !sections.final.classList.contains('active')) {
+                    dot.classList.add('active');
+                } else if (index + 1 < currentRound) {
+                    dot.classList.add('completed');
                 }
-            }, 50);
+            });
         }
         
         // Create confetti effect
@@ -599,16 +484,8 @@
                 confetti.className = 'confetti';
                 confetti.style.left = `${Math.random() * 100}vw`;
                 confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
-                confetti.style.width = `${Math.random() * 10 + 5}px`;
-                confetti.style.height = `${Math.random() * 10 + 5}px`;
-                confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
-                confetti.style.animationDelay = `${Math.random() * 2}s`;
                 document.body.appendChild(confetti);
-                
-                // Remove confetti after animation
-                setTimeout(() => {
-                    confetti.remove();
-                }, 5000);
+                setTimeout(() => confetti.remove(), 5000);
             }
         }
         
@@ -617,203 +494,77 @@
             const name = playerNameInput.value.trim();
             if (name.length < 2) {
                 registerMessage.textContent = 'Please enter a name (at least 2 characters)';
-                registerMessage.className = 'message message-error';
+                registerMessage.className = 'message';
                 return;
             }
             
-            // Generate a unique ID for the player
             playerId = 'player_' + Math.random().toString(36).substr(2, 9);
             playerName = name;
             
             // Register player in Firebase
-            playersRef.child(playerId).set({
+            db.ref('players/' + playerId).set({
                 name: playerName,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
                 registerMessage.textContent = `Registered as ${name}!`;
                 registerMessage.className = 'message message-success';
+                displayName.textContent = name;
+                showSection('strategy');
+            });
+        });
+        
+        // Strategy selection
+        Object.entries(choiceBtns).forEach(([strategy, btn]) => {
+            btn.addEventListener('click', () => {
+                playerStrategy = strategy;
+                document.getElementById('choice-message').textContent = `You chose ${strategy.toUpperCase()}!`;
                 
-                // Animate button and transition to waiting section
-                registerBtn.classList.add('animate__pulse');
-                setTimeout(() => {
-                    registerBtn.classList.remove('animate__pulse');
-                    displayName.textContent = name;
+                // Save strategy to Firebase
+                db.ref('strategies/' + playerId).set({
+                    strategy: strategy,
+                    name: playerName
+                }).then(() => {
                     showSection('waiting');
-                    
-                    // Listen for game state changes
-                    setupGameStateListener();
-                }, 1000);
-            }).catch(error => {
-                registerMessage.textContent = 'Registration failed: ' + error.message;
-                registerMessage.className = 'message message-error';
+                    setupGameListener();
+                });
             });
         });
         
         // Set up game state listener
-        function setupGameStateListener() {
-            gameStateRef.on('value', (snapshot) => {
-                const state = snapshot.val() || {};
+        function setupGameListener() {
+            db.ref('gameState').on('value', (snapshot) => {
+                const gameState = snapshot.val() || {};
                 
-                if (state.status === 'choosing') {
-                    // New round starting
-                    currentRound = state.round || 1;
+                if (gameState.status === 'dice' && gameState.round === currentRound) {
+                    statusMessage.textContent = `Round ${currentRound} - Enter your dice rolls!`;
                     roundNumberDisplay.textContent = currentRound;
-                    
-                    showSection('choice');
-                    statusMessage.textContent = 'Make your choice for this round!';
-                    startTimer();
-                } else if (state.status === 'rolling') {
-                    // Dice rolling phase
-                    currentRound = state.round || 1;
-                    diceRoundNumberDisplay.textContent = currentRound;
-                    
+                    dice1.value = '';
+                    dice2.value = '';
+                    dice3.value = '';
+                    diceTotal.textContent = '0';
                     showSection('dice');
-                } else if (state.status === 'results') {
-                    // Results available
-                    currentRound = state.round || 1;
-                    waitingRoundNumberDisplay.textContent = currentRound;
-                    resultsRoundNumberDisplay.textContent = currentRound;
-                    
-                    // Get results for this round
-                    roundsRef.child(`round${currentRound}`).once('value').then(snapshot => {
-                        const roundResults = snapshot.val() || {};
-                        const playerResult = roundResults[playerId];
-                        
-                        if (playerResult) {
-                            showRoundResults(roundResults);
-                        } else {
-                            showSection('waitingResults');
+                } else if (gameState.status === 'results' && gameState.round === currentRound) {
+                    // Get round results
+                    db.ref(`rounds/round${currentRound}/${playerId}`).once('value').then(snap => {
+                        const result = snap.val();
+                        if (result) {
+                            roundResults[currentRound] = result;
+                            showRoundResults();
                         }
                     });
-                } else if (state.status === 'finished') {
-                    // Game finished, show final results
+                } else if (gameState.status === 'final') {
                     showFinalResults();
                 }
             });
         }
         
-        // Start choice timer
-        function startTimer() {
-            // Reset choice
-            playerChoice = '';
-            choiceMessage.textContent = '';
-            choiceMessage.className = 'message';
-            
-            // Reset choice buttons animations
-            Object.values(choiceBtns).forEach(btn => {
-                btn.classList.remove('animate__tada');
-                btn.style.transform = '';
-                btn.style.boxShadow = '';
-            });
-            
-            // Clear any existing timer
-            clearInterval(timerInterval);
-            
-            timeLeft = 30;
-            timerDisplay.textContent = timeLeft;
-            timerCircle.style.strokeDashoffset = 283; // Full circle
-            
-            // Animate the timer circle
-            const circumference = 283;
-            const intervalTime = 50; // ms
-            const totalIntervals = (timeLeft * 1000) / intervalTime;
-            const dashOffsetPerInterval = circumference / totalIntervals;
-            
-            let currentOffset = circumference;
-            
-            timerInterval = setInterval(() => {
-                timeLeft -= intervalTime / 1000;
-                currentOffset -= dashOffsetPerInterval;
-                
-                timerDisplay.textContent = Math.ceil(timeLeft);
-                timerCircle.style.strokeDashoffset = currentOffset;
-                
-                // Change color when time is running out
-                if (timeLeft <= 10) {
-                    timerCircle.style.stroke = 'var(--danger)';
-                    timerDisplay.style.color = 'var(--danger)';
-                    
-                    // Add pulse animation to timer
-                    if (timeLeft % 1 < 0.1) {
-                        timerDisplay.classList.add('animate__pulse');
-                        setTimeout(() => {
-                            timerDisplay.classList.remove('animate__pulse');
-                        }, 300);
-                    }
-                }
-                
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    if (!playerChoice) {
-                        // Auto-select a random choice if time runs out
-                        const options = ['max', 'min', 'mid', 'zero'];
-                        playerChoice = options[Math.floor(Math.random() * options.length)];
-                        makeChoice(playerChoice);
-                    }
-                }
-            }, intervalTime);
-        }
-        
-        // Add click animations to choice buttons
-        Object.entries(choiceBtns).forEach(([choice, btn]) => {
-            btn.addEventListener('click', () => makeChoice(choice));
-            
-            // Add hover animations
-            btn.addEventListener('mouseenter', () => {
-                btn.classList.add('animate__pulse');
-            });
-            
-            btn.addEventListener('mouseleave', () => {
-                btn.classList.remove('animate__pulse');
-            });
-        });
-        
-        function makeChoice(choice) {
-            clearInterval(timerInterval);
-            playerChoice = choice;
-            
-            // Animate the selected button
-            choiceBtns[choice].classList.add('animate__tada');
-            
-            // Reset other buttons
-            Object.entries(choiceBtns).forEach(([c, btn]) => {
-                if (c !== choice) {
-                    btn.style.transform = 'scale(0.9)';
-                    btn.style.opacity = '0.6';
-                }
-            });
-            
-            choiceMessage.textContent = `You chose ${choice.toUpperCase()}!`;
-            choiceMessage.className = 'message message-success';
-            
-            // Save choice to Firebase
-            choicesRef.child(playerId).set(choice).then(() => {
-                // Wait for admin to start the round
-                choiceMessage.textContent += ' Waiting for other players...';
-            }).catch(error => {
-                choiceMessage.textContent = 'Error saving choice: ' + error.message;
-                choiceMessage.className = 'message message-error';
-            });
-        }
-        
-        // Set up dice total calculation
+        // Update dice total
         [dice1, dice2, dice3].forEach(dice => {
-            dice.addEventListener('change', updateDiceTotal);
-            dice.addEventListener('focus', function() {
-                this.select();
+            dice.addEventListener('change', () => {
+                const total = parseInt(dice1.value || 0) + parseInt(dice2.value || 0) + parseInt(dice3.value || 0);
+                diceTotal.textContent = total;
             });
         });
-        
-        function updateDiceTotal() {
-            const total = parseInt(dice1.value || 0) + parseInt(dice2.value || 0) + parseInt(dice3.value || 0);
-            diceTotal.textContent = total;
-            
-            // Animate total change
-            diceTotal.classList.add('animate__bounce');
-            setTimeout(() => {
-                diceTotal.classList.remove('animate__bounce');
-            }, 1000);
-        }
         
         // Submit dice rolls
         submitDiceBtn.addEventListener('click', () => {
@@ -821,197 +572,185 @@
             const d2 = parseInt(dice2.value);
             const d3 = parseInt(dice3.value);
             
-            if (isNaN(d1) || d1 < 1 || d1 > 6) {
-                diceMessage.textContent = 'Please enter a valid number (1-6) for Dice 1';
-                diceMessage.className = 'message message-error';
+            if (isNaN(d1)) {
+                diceMessage.textContent = 'Please enter a value for Dice 1';
                 return;
             }
-            if (isNaN(d2) || d2 < 1 || d2 > 6) {
-                diceMessage.textContent = 'Please enter a valid number (1-6) for Dice 2';
-                diceMessage.className = 'message message-error';
+            if (isNaN(d2)) {
+                diceMessage.textContent = 'Please enter a value for Dice 2';
                 return;
             }
-            if (isNaN(d3) || d3 < 1 || d3 > 6) {
-                diceMessage.textContent = 'Please enter a valid number (1-6) for Dice 3';
-                diceMessage.className = 'message message-error';
+            if (isNaN(d3)) {
+                diceMessage.textContent = 'Please enter a value for Dice 3';
                 return;
             }
             
             const total = d1 + d2 + d3;
             
-            // Animate submission
-            submitDiceBtn.classList.add('animate__pulse');
-            
-            // Save dice results to Firebase
-            diceRef.child(playerId).set({
+            // Save dice to Firebase
+            db.ref(`dice/round${currentRound}/${playerId}`).set({
                 dice: [d1, d2, d3],
-                total: total
+                total: total,
+                name: playerName
             }).then(() => {
-                diceMessage.textContent = 'Dice submitted! Waiting for results...';
-                diceMessage.className = 'message message-success';
-                
-                setTimeout(() => {
-                    submitDiceBtn.classList.remove('animate__pulse');
-                    showSection('waitingResults');
-                }, 1000);
-            }).catch(error => {
-                diceMessage.textContent = 'Error submitting dice: ' + error.message;
-                diceMessage.className = 'message message-error';
-                submitDiceBtn.classList.remove('animate__pulse');
+                showSection('waiting');
+                statusMessage.textContent = `Waiting for round ${currentRound} results...`;
             });
         });
         
         // Show round results
-        function showRoundResults(roundResults) {
-            const playerResult = roundResults[playerId];
-            const allPlayers = Object.values(roundResults);
-            
-            // Sort players by rank
-            allPlayers.sort((a, b) => a.rank - b.rank);
+        function showRoundResults() {
+            resultsRoundNumberDisplay.textContent = currentRound;
             
             let html = `
-                <div class="message ${playerResult.bonus > 0 ? 'message-success' : 'message-info'}" style="margin-bottom: 2rem;">
-                    <h3>You placed ${playerResult.rank}${getOrdinalSuffix(playerResult.rank)}!</h3>
-                    <p>Total: <strong>${playerResult.total}</strong></p>
-                    <p>Points: <strong>${playerResult.points.toFixed(1)}</strong></p>
-                    ${playerResult.bonus > 0 ? `<p>Bonus: <strong>+${playerResult.bonus.toFixed(1)}</strong> (${playerResult.bonusReason})</p>` : ''}
-                    <p>Round Total: <strong>${playerResult.totalPoints.toFixed(1)} points</strong></p>
-                </div>
-                
                 <table class="results-table">
                     <thead>
                         <tr>
-                            <th>Rank</th>
-                            <th>Player</th>
+                            <th>Round</th>
                             <th>Total</th>
+                            <th>Rank</th>
                             <th>Points</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
-            allPlayers.forEach(player => {
-                html += `
-                    <tr ${player.name === playerResult.name ? 'class="highlight"' : ''}>
-                        <td>${player.rank}${getOrdinalSuffix(player.rank)}</td>
-                        <td>${player.name} <small>(${player.choice})</small></td>
-                        <td>${player.total}</td>
-                        <td>${player.totalPoints.toFixed(1)}</td>
-                    </tr>
-                `;
-            });
+            let cumulativePoints = 0;
+            for (let i = 1; i <= currentRound; i++) {
+                if (roundResults[i]) {
+                    cumulativePoints += roundResults[i].points;
+                    html += `
+                        <tr ${i === currentRound ? 'class="highlight"' : ''}>
+                            <td>${i}</td>
+                            <td>${roundResults[i].total}</td>
+                            <td>${roundResults[i].rank}${getOrdinalSuffix(roundResults[i].rank)}</td>
+                            <td>${roundResults[i].points.toFixed(1)}</td>
+                        </tr>
+                    `;
+                }
+            }
             
-            html += `</tbody></table>`;
+            html += `
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3"><strong>Total</strong></td>
+                            <td><strong>${cumulativePoints.toFixed(1)}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+            
             resultsContainer.innerHTML = html;
-            
-            // Show confetti if player got a bonus
-            if (playerResult.bonus > 0) {
-                createConfetti();
-            }
-            
-            // Show ready button if not final round
-            if (currentRound < maxRounds) {
-                readyNextBtn.classList.remove('hidden');
-            } else {
-                readyNextBtn.classList.add('hidden');
-            }
-            
             showSection('results');
         }
         
-        // Ready for next round button
-        readyNextBtn.addEventListener('click', () => {
-            // Reset for next round
-            playerChoice = '';
-            dice1.value = '';
-            dice2.value = '';
-            dice3.value = '';
-            diceTotal.textContent = '0';
-            diceMessage.textContent = '';
-            diceMessage.className = 'message';
-            
-            // Animate button click
-            readyNextBtn.classList.add('animate__pulse');
-            setTimeout(() => {
-                readyNextBtn.classList.remove('animate__pulse');
+        // Continue to next round
+        continueBtn.addEventListener('click', () => {
+            currentRound++;
+            if (currentRound <= 3) {
                 showSection('waiting');
-                statusMessage.textContent = 'Waiting for next round to start...';
-            }, 500);
+                statusMessage.textContent = `Waiting for round ${currentRound} to start...`;
+            } else {
+                showFinalResults();
+            }
         });
         
-        // Show final results
+        // Show final results with strategy reveal
         function showFinalResults() {
-            // Get all round results
-            roundsRef.once('value').then(snapshot => {
-                const allRounds = snapshot.val() || {};
-                let totalPoints = 0;
-                let totalBonus = 0;
+            // Get final results from Firebase
+            db.ref(`finalResults/${playerId}`).once('value').then(snap => {
+                const finalResult = snap.val();
+                if (!finalResult) return;
                 
-                // Calculate player's total points across all rounds
-                for (const [roundKey, round] of Object.entries(allRounds)) {
-                    if (round[playerId]) {
-                        totalPoints += round[playerId].points;
-                        totalBonus += round[playerId].bonus;
+                // Display round-by-round results
+                let html = `
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Round</th>
+                                <th>Total</th>
+                                <th>Rank</th>
+                                <th>Points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                let totalPoints = 0;
+                for (let i = 1; i <= 3; i++) {
+                    if (roundResults[i]) {
+                        totalPoints += roundResults[i].points;
+                        html += `
+                            <tr>
+                                <td>${i}</td>
+                                <td>${roundResults[i].total}</td>
+                                <td>${roundResults[i].rank}${getOrdinalSuffix(roundResults[i].rank)}</td>
+                                <td>${roundResults[i].points.toFixed(1)}</td>
+                            </tr>
+                        `;
                     }
                 }
                 
-                // Display final results
-                finalResultsContainer.innerHTML = `
-                    <div class="message message-success" style="margin-bottom: 2rem;">
-                        <h3>Congratulations, ${playerName}!</h3>
-                        <p>Your total points: <strong>${totalPoints.toFixed(1)}</strong></p>
-                        <p>Your total bonus: <strong>${totalBonus.toFixed(1)}</strong></p>
-                        <p style="font-size: 1.5rem;">Grand total: <strong>${(totalPoints + totalBonus).toFixed(1)}</strong></p>
-                    </div>
+                html += `
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3"><strong>Total Points</strong></td>
+                                <td><strong>${totalPoints.toFixed(1)}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 `;
                 
-                // Big confetti celebration
-                createConfetti();
-                setTimeout(createConfetti, 1000);
-                setTimeout(createConfetti, 1500);
+                finalResultsContainer.innerHTML = html;
                 
-                showSection('finalResults');
+                // Reveal strategy
+                strategyReveal.innerHTML = `
+                    <h3>Your Strategy</h3>
+                    <p>You chose: <strong>${playerStrategy.toUpperCase()}</strong></p>
+                `;
+                
+                // Show bonus calculation
+                bonusCalculation.innerHTML = `
+                    <h3>Bonus Calculation</h3>
+                    <p>${finalResult.bonusMessage}</p>
+                    ${finalResult.bonus > 0 ? `<p>Bonus: <strong>+${finalResult.bonus.toFixed(1)}</strong></p>` : ''}
+                `;
+                
+                // Show final score
+                finalScoreDisplay.textContent = `Final Score: ${finalResult.finalScore.toFixed(1)}`;
+                
+                if (finalResult.bonus > 0) {
+                    createConfetti();
+                }
+                
+                showSection('final');
             });
         }
         
-        // Play again button
+        // Play again
         playAgainBtn.addEventListener('click', () => {
-            // Reset player for new game
-            playerChoice = '';
-            dice1.value = '';
-            dice2.value = '';
-            dice3.value = '';
-            diceTotal.textContent = '0';
-            progressBar.style.width = '0%';
+            // Reset game state
+            currentRound = 1;
+            roundResults = {};
+            playerStrategy = '';
+            playerNameInput.value = '';
             
-            // Animate button click
-            playAgainBtn.classList.add('animate__pulse');
-            setTimeout(() => {
-                playAgainBtn.classList.remove('animate__pulse');
-                showSection('register');
-                playerNameInput.value = '';
-                registerMessage.textContent = '';
-                registerMessage.className = 'message';
-            }, 500);
+            showSection('register');
         });
         
         // Helper function for ordinal suffixes
         function getOrdinalSuffix(num) {
             const j = num % 10;
             const k = num % 100;
-            if (j === 1 && k !== 11) {
-                return 'st';
-            }
-            if (j === 2 && k !== 12) {
-                return 'nd';
-            }
-            if (j === 3 && k !== 13) {
-                return 'rd';
-            }
+            if (j === 1 && k !== 11) return 'st';
+            if (j === 2 && k !== 12) return 'nd';
+            if (j === 3 && k !== 13) return 'rd';
             return 'th';
         }
         
-        // Initialize by showing register section
+        // Initialize
         showSection('register');
     </script>
 </body>
