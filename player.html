@@ -283,7 +283,7 @@
         <section id="register-section" class="game-section">
             <div class="header">
                 <h1 class="title">Comparison Game</h1>
-                <p class="subtitle">Test your prediction skills across 3 rounds!</p>
+                <p class="subtitle">Test your prediction skills across multiple rounds!</p>
             </div>
             <input type="text" id="player-name" class="input-field" placeholder="Enter your nickname">
             <button id="register-btn" class="btn btn-primary">
@@ -296,7 +296,7 @@
         <section id="strategy-section" class="game-section">
             <div class="header">
                 <h1 class="title">Choose Your Strategy</h1>
-                <p class="subtitle">This choice will apply to all 3 rounds</p>
+                <p class="subtitle">This choice will apply to all rounds</p>
             </div>
             <div class="choice-container">
                 <div id="max-btn" class="choice-btn">
@@ -325,10 +325,8 @@
                 <h1 class="title">Welcome, <span id="display-name"></span>!</h1>
                 <p class="subtitle">Waiting for game to start</p>
             </div>
-            <div class="round-tracker">
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
+            <div class="round-tracker" id="round-tracker">
+                <!-- Dots will be added dynamically -->
             </div>
             <div class="animate__animated animate__pulse animate__infinite" style="text-align: center;">
                 <i class="fas fa-users" style="font-size: 3rem; color: var(--secondary);"></i>
@@ -342,10 +340,8 @@
                 <h1 class="title">Round <span id="round-number">1</span></h1>
                 <p class="subtitle">Enter your dice rolls</p>
             </div>
-            <div class="round-tracker">
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
+            <div class="round-tracker" id="dice-round-tracker">
+                <!-- Dots will be added dynamically -->
             </div>
             <div class="dice-container">
                 <input type="number" min="1" max="6" id="dice1" class="dice-input">
@@ -365,10 +361,8 @@
                 <h1 class="title">Round <span id="results-round-number">1</span> Complete</h1>
                 <p class="subtitle">Your current standings</p>
             </div>
-            <div class="round-tracker">
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
+            <div class="round-tracker" id="results-round-tracker">
+                <!-- Dots will be added dynamically -->
             </div>
             <div id="results-container" style="width: 100%;"></div>
             <button id="continue-btn" class="btn btn-primary">
@@ -413,6 +407,7 @@
         let playerName = '';
         let playerChoice = '';
         let currentRound = 1;
+        let totalRounds = 3;
         let roundResults = {};
         let playerStrategy = '';
         
@@ -446,7 +441,9 @@
         const finalScoreDisplay = document.getElementById('final-score');
         const continueBtn = document.getElementById('continue-btn');
         const playAgainBtn = document.getElementById('play-again-btn');
-        const roundDots = document.querySelectorAll('.round-dot');
+        const roundTracker = document.getElementById('round-tracker');
+        const diceRoundTracker = document.getElementById('dice-round-tracker');
+        const resultsRoundTracker = document.getElementById('results-round-tracker');
         
         // Choice buttons
         const choiceBtns = {
@@ -455,6 +452,24 @@
             mid: document.getElementById('mid-btn'),
             zero: document.getElementById('zero-btn')
         };
+        
+        // Initialize round tracker dots
+        function initRoundTrackers() {
+            roundTracker.innerHTML = '';
+            diceRoundTracker.innerHTML = '';
+            resultsRoundTracker.innerHTML = '';
+            
+            for (let i = 0; i < totalRounds; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'round-dot';
+                if (i + 1 === currentRound) {
+                    dot.classList.add('active');
+                }
+                roundTracker.appendChild(dot.cloneNode(true));
+                diceRoundTracker.appendChild(dot.cloneNode(true));
+                resultsRoundTracker.appendChild(dot.cloneNode(true));
+            }
+        }
         
         // Show a specific section
         function showSection(sectionId) {
@@ -467,7 +482,13 @@
         
         // Update round tracker dots
         function updateRoundDots() {
-            roundDots.forEach((dot, index) => {
+            const dots = [
+                ...roundTracker.querySelectorAll('.round-dot'),
+                ...diceRoundTracker.querySelectorAll('.round-dot'),
+                ...resultsRoundTracker.querySelectorAll('.round-dot')
+            ];
+            
+            dots.forEach((dot, index) => {
                 dot.classList.remove('active', 'completed');
                 if (index + 1 === currentRound && !sections.final.classList.contains('active')) {
                     dot.classList.add('active');
@@ -534,6 +555,11 @@
         function setupGameListener() {
             db.ref('gameState').on('value', (snapshot) => {
                 const gameState = snapshot.val() || {};
+                
+                if (gameState.totalRounds) {
+                    totalRounds = gameState.totalRounds;
+                    initRoundTrackers();
+                }
                 
                 if (gameState.status === 'dice' && gameState.round === currentRound) {
                     statusMessage.textContent = `Round ${currentRound} - Enter your dice rolls!`;
@@ -648,7 +674,7 @@
         // Continue to next round
         continueBtn.addEventListener('click', () => {
             currentRound++;
-            if (currentRound <= 3) {
+            if (currentRound <= totalRounds) {
                 showSection('waiting');
                 statusMessage.textContent = `Waiting for round ${currentRound} to start...`;
             } else {
@@ -678,7 +704,7 @@
                 `;
                 
                 let totalPoints = 0;
-                for (let i = 1; i <= 3; i++) {
+                for (let i = 1; i <= totalRounds; i++) {
                     if (roundResults[i]) {
                         totalPoints += roundResults[i].points;
                         html += `
@@ -751,6 +777,7 @@
         }
         
         // Initialize
+        initRoundTrackers();
         showSection('register');
     </script>
 </body>
