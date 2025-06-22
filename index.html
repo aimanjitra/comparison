@@ -343,6 +343,7 @@
         const finalResultsSection = document.getElementById('final-results-section');
         const finalResultsList = document.getElementById('final-results-list');
         const newGameBtn = document.getElementById('new-game-btn');
+        const playerSubmissionsSection = document.getElementById('player-submissions-section');
         
         // Initialize game
         function initGame() {
@@ -377,6 +378,8 @@
             
             // New game button
             newGameBtn.addEventListener('click', resetGame);
+
+            calculateResultsBtn.addEventListener('click', calculateRoundResults);
         }
         
         // Update players list
@@ -598,29 +601,31 @@
         
         // Calculate final results with bonuses
         function calculateFinalResults() {
-            // Get all round results
-            db.ref('rounds').once('value').then(snapshot => {
-                const roundsData = snapshot.val() || {};
-                const playerTotals = {};
-                
-                // Calculate total points for each player
-                for (const [roundKey, round] of Object.entries(roundsData)) {
-                    for (const [playerId, result] of Object.entries(round)) {
-                        if (!playerTotals[playerId]) {
-                            playerTotals[playerId] = {
-                                name: result.name,
-                                totalPoints: 0,
-                                rounds: []
-                            };
-                        }
-                        playerTotals[playerId].totalPoints += result.points;
-                        playerTotals[playerId].rounds.push({
-                            round: parseInt(roundKey.replace('round', '')),
-                            points: result.points,
-                            rank: result.rank
-                        });
-                    }
+    // Initialize playerTotals as an empty object
+    const playerTotals = {};
+    
+    // Get all round results
+    db.ref('rounds').once('value').then(snapshot => {
+        const roundsData = snapshot.val() || {};
+        
+        // Calculate total points for each player
+        for (const [roundKey, round] of Object.entries(roundsData)) {
+            for (const [playerId, result] of Object.entries(round)) {
+                if (!playerTotals[playerId]) {
+                    playerTotals[playerId] = {
+                        name: result.name,
+                        totalPoints: 0,
+                        rounds: []
+                    };
                 }
+                playerTotals[playerId].totalPoints += result.points;
+                playerTotals[playerId].rounds.push({
+                    round: parseInt(roundKey.replace('round', '')),
+                    points: result.points,
+                    rank: result.rank
+                });
+            }
+        }
                 
                 // Get strategies
                 return db.ref('strategies').once('value');
