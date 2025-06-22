@@ -229,11 +229,9 @@
 
         <!-- Current Round Section -->
         <div class="game-section" id="current-round-section" style="display: none;">
-            <h2 class="section-title">Round <span id="current-round-display">1</span> of 3</h2>
-            <div class="round-tracker">
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
-                <div class="round-dot"></div>
+            <h2 class="section-title">Round <span id="current-round-display">1</span> of <span id="total-rounds">3</span></h2>
+            <div class="round-tracker" id="round-tracker">
+                <!-- Dots will be added dynamically -->
             </div>
 
             <!-- Player Submissions Section -->
@@ -299,9 +297,14 @@
                     <!-- Final results will be listed here -->
                 </tbody>
             </table>
-            <button id="new-game-btn" class="btn btn-primary">
-                <i class="fas fa-redo"></i> New Game
-            </button>
+            <div class="btn-group">
+                <button id="continue-game-btn" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Continue with 3 More Rounds
+                </button>
+                <button id="new-game-btn" class="btn btn-primary">
+                    <i class="fas fa-redo"></i> New Game
+                </button>
+            </div>
         </div>
     </div>
 
@@ -325,8 +328,10 @@
         let players = {};
         let strategies = {};
         let currentRound = 1;
+        const totalRounds = 3;
         let playerSubmissions = {};
         let roundResults = {};
+        let gameSetsCompleted = 0;
         
         // DOM elements
         const playersList = document.getElementById('players-list');
@@ -334,7 +339,8 @@
         const minPlayersWarning = document.getElementById('min-players-warning');
         const currentRoundSection = document.getElementById('current-round-section');
         const currentRoundDisplay = document.getElementById('current-round-display');
-        const roundDots = document.querySelectorAll('.round-dot');
+        const totalRoundsDisplay = document.getElementById('total-rounds');
+        const roundTracker = document.getElementById('round-tracker');
         const playerSubmissionsList = document.getElementById('player-submissions-list');
         const calculateResultsBtn = document.getElementById('calculate-results-btn');
         const roundResultsSection = document.getElementById('round-results-section');
@@ -343,6 +349,7 @@
         const finalResultsSection = document.getElementById('final-results-section');
         const finalResultsList = document.getElementById('final-results-list');
         const newGameBtn = document.getElementById('new-game-btn');
+        const continueGameBtn = document.getElementById('continue-game-btn');
         const playerSubmissionsSection = document.getElementById('player-submissions-section');
         
         // Initialize game
@@ -378,8 +385,15 @@
             
             // New game button
             newGameBtn.addEventListener('click', resetGame);
-
+            
+            // Continue game button
+            continueGameBtn.addEventListener('click', continueGame);
+            
+            // Calculate results button
             calculateResultsBtn.addEventListener('click', calculateRoundResults);
+            
+            // Initialize round tracker dots
+            updateRoundTrackerDots();
         }
         
         // Update players list
@@ -402,14 +416,21 @@
         // Start the game
         function startGame() {
             currentRound = 1;
+            gameSetsCompleted = 0;
             startGameBtn.disabled = true;
             currentRoundSection.style.display = 'block';
             updateRoundDisplay();
             
+            // Clear previous results
+            db.ref('rounds').remove();
+            db.ref('finalResults').remove();
+            db.ref('previousResults').remove();
+            
             // Set game state to first round
             db.ref('gameState').set({
                 status: 'dice',
-                round: currentRound
+                round: currentRound,
+                totalRounds: totalRounds
             });
             
             setupRound();
@@ -418,7 +439,11 @@
         // Update round display
         function updateRoundDisplay() {
             currentRoundDisplay.textContent = currentRound;
-            roundDots.forEach((dot, index) => {
+            totalRoundsDisplay.textContent = totalRounds;
+            
+            // Update round tracker dots
+            const dots = roundTracker.querySelectorAll('.round-dot');
+            dots.forEach((dot, index) => {
                 dot.classList.remove('active', 'completed');
                 if (index + 1 === currentRound) {
                     dot.classList.add('active');
@@ -426,6 +451,19 @@
                     dot.classList.add('completed');
                 }
             });
+        }
+        
+        // Update round tracker dots
+        function updateRoundTrackerDots() {
+            roundTracker.innerHTML = '';
+            for (let i = 0; i < totalRounds; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'round-dot';
+                if (i + 1 === currentRound) {
+                    dot.classList.add('active');
+                }
+                roundTracker.appendChild(dot);
+            }
         }
         
         // Set up the current round
@@ -497,7 +535,7 @@
             }
         }
         
-        // Calculate round results
+        // Calculate round results with tie handling
         function calculateRoundResults() {
             // Convert submissions to array for sorting
             const resultsArray = Object.entries(playerSubmissions).map(([playerId, data]) => ({
@@ -509,36 +547,73 @@
             // Sort by total (descending)
             resultsArray.sort((a, b) => b.total - a.total);
             
-            // Assign ranks (handle ties)
-            let currentRank = 1;
+            // Group players by their totals to identify ties
+            const groupedResults = {};
+            resultsArray.forEach(result => {
+                if (!groupedResults[result.total]) {
+                    groupedResults[result.total] = [];
+                }
+                groupedResults[result.total].push(result);
+            });
+            
+            // Calculate ranks and points
             const rankedResults = {};
-            for (let i = 0; i < resultsArray.length; i++) {
-                const result = resultsArray[i];
-                if (i > 0 && result.total === resultsArray[i-1].total) {
-                    // Tie with previous player
-                    result.rank = resultsArray[i-1].rank;
+            let currentRank = 1;
+            const totals = Object.keys(groupedResults).sort((a, b) => b - a);
+            
+            for (let i = 0; i < totals.length; i++) {
+                const total = totals[i];
+                const group = groupedResults[total];
+                const groupSize = group.length;
+                
+                // Calculate combined points for all positions in this group
+                let combinedPoints = 0;
+                let positionsCovered = 0;
+                
+                if (currentRank === 1) {
+                    // First place group
+                    if (groupSize === 1) {
+                        combinedPoints = 6;
+                        positionsCovered = 1;
+                    } else {
+                        // 1st and 2nd place points combined
+                        combinedPoints = 6 + 3;
+                        positionsCovered = 2;
+                    }
+                } else if (currentRank === 2 && groupSize > 1) {
+                    // Shared 2nd and 3rd place
+                    combinedPoints = 3 + 1;
+                    positionsCovered = 2;
+                } else if (currentRank >= 3 && groupSize > 1) {
+                    // Shared 3rd and lower places
+                    combinedPoints = 1 + 0;
+                    positionsCovered = 2;
                 } else {
+                    // No tie - standard points
+                    if (currentRank === 1) combinedPoints = 6;
+                    else if (currentRank === 2) combinedPoints = 3;
+                    else if (currentRank === 3) combinedPoints = 1;
+                    else combinedPoints = 0;
+                    positionsCovered = 1;
+                }
+                
+                // Calculate points per player in this group
+                const pointsPerPlayer = combinedPoints / groupSize;
+                
+                // Assign ranks and points
+                group.forEach(result => {
                     result.rank = currentRank;
-                }
-                currentRank++;
+                    result.points = pointsPerPlayer;
+                    
+                    rankedResults[result.playerId] = {
+                        name: result.name,
+                        total: result.total,
+                        rank: result.rank,
+                        points: result.points
+                    };
+                });
                 
-                // Assign points based on rank
-                if (result.rank === 1) {
-                    result.points = 6;
-                } else if (result.rank === 2) {
-                    result.points = 3;
-                } else if (result.rank === 3) {
-                    result.points = 1;
-                } else {
-                    result.points = 0;
-                }
-                
-                rankedResults[result.playerId] = {
-                    name: result.name,
-                    total: result.total,
-                    rank: result.rank,
-                    points: result.points
-                };
+                currentRank += groupSize;
             }
             
             // Save round results
@@ -581,7 +656,7 @@
         // Move to next round
         function nextRound() {
             currentRound++;
-            if (currentRound <= 3) {
+            if (currentRound <= totalRounds) {
                 roundResultsSection.style.display = 'none';
                 playerSubmissionsSection.style.display = 'block';
                 calculateResultsBtn.disabled = true;
@@ -595,37 +670,51 @@
                 
                 setupRound();
             } else {
+                gameSetsCompleted++;
                 calculateFinalResults();
             }
         }
         
         // Calculate final results with bonuses
         function calculateFinalResults() {
-    // Initialize playerTotals as an empty object
-    const playerTotals = {};
-    
-    // Get all round results
-    db.ref('rounds').once('value').then(snapshot => {
-        const roundsData = snapshot.val() || {};
-        
-        // Calculate total points for each player
-        for (const [roundKey, round] of Object.entries(roundsData)) {
-            for (const [playerId, result] of Object.entries(round)) {
-                if (!playerTotals[playerId]) {
-                    playerTotals[playerId] = {
-                        name: result.name,
-                        totalPoints: 0,
-                        rounds: []
-                    };
+            const playerTotals = {};
+            
+            // Get all round results
+            db.ref('rounds').once('value').then(snapshot => {
+                const roundsData = snapshot.val() || {};
+                
+                // Calculate total points for each player in current set
+                for (const [roundKey, round] of Object.entries(roundsData)) {
+                    for (const [playerId, result] of Object.entries(round)) {
+                        if (!playerTotals[playerId]) {
+                            playerTotals[playerId] = {
+                                name: result.name,
+                                totalPoints: 0,
+                                rounds: [],
+                                previousPoints: 0
+                            };
+                        }
+                        playerTotals[playerId].totalPoints += result.points;
+                        playerTotals[playerId].rounds.push({
+                            round: parseInt(roundKey.replace('round', '')),
+                            points: result.points,
+                            rank: result.rank
+                        });
+                    }
                 }
-                playerTotals[playerId].totalPoints += result.points;
-                playerTotals[playerId].rounds.push({
-                    round: parseInt(roundKey.replace('round', '')),
-                    points: result.points,
-                    rank: result.rank
-                });
-            }
-        }
+                
+                // Check for previous results and accumulate
+                return db.ref('previousResults').once('value');
+            }).then(previousSnapshot => {
+                const previousResults = previousSnapshot.val() || {};
+                
+                // Add previous points to current totals
+                for (const [playerId, result] of Object.entries(previousResults)) {
+                    if (playerTotals[playerId]) {
+                        playerTotals[playerId].previousPoints = result.totalPoints || 0;
+                        playerTotals[playerId].totalPoints += result.totalPoints || 0;
+                    }
+                }
                 
                 // Get strategies
                 return db.ref('strategies').once('value');
@@ -748,16 +837,48 @@
             });
         }
         
-        // Reset game
+        // Continue with additional 3 rounds
+        function continueGame() {
+            // Save current final results as previous results
+            db.ref('finalResults').once('value').then(snapshot => {
+                const finalResults = snapshot.val() || {};
+                
+                // Save as previous results
+                return db.ref('previousResults').set(finalResults);
+            }).then(() => {
+                // Reset round data but keep players and strategies
+                db.ref('dice').remove();
+                db.ref('rounds').remove();
+                db.ref('finalResults').remove();
+                db.ref('gameState').remove();
+                
+                // Reset UI
+                finalResultsSection.style.display = 'none';
+                currentRoundSection.style.display = 'block';
+                currentRound = 1;
+                updateRoundDisplay();
+                
+                // Set game state to first round of next set
+                db.ref('gameState').set({
+                    status: 'dice',
+                    round: currentRound
+                });
+                
+                setupRound();
+            });
+        }
+        
+        // Reset game completely
         function resetGame() {
             if (confirm('Are you sure you want to start a new game? All current data will be reset.')) {
-                // Reset all game data in Firebase
+                // Reset ALL game data in Firebase
                 db.ref('players').remove();
                 db.ref('strategies').remove();
                 db.ref('dice').remove();
                 db.ref('rounds').remove();
                 db.ref('finalResults').remove();
                 db.ref('gameState').remove();
+                db.ref('previousResults').remove();
                 
                 // Reset UI
                 finalResultsSection.style.display = 'none';
