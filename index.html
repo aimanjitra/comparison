@@ -4,117 +4,289 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparison Game - Admin</title>
-    <!-- Add the Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* (Keep all the same CSS styles from previous admin interface) */
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --accent: #fd79a8;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --danger: #e17055;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .admin-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .game-section {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            border: 2px solid var(--secondary);
+            border-radius: 5px;
+        }
+
+        .round-tracker {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .round-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 5px;
+            background-color: var(--secondary);
+        }
+
+        .round-dot.active {
+            background-color: var(--primary);
+        }
+
+        .round-dot.completed {
+            background-color: var(--success);
+        }
+
+        .player-choice {
+            font-weight: bold;
+        }
+
+        .max { color: #e84393; }
+        .min { color: #0984e3; }
+        .mid { color: #00b894; }
+        .zero { color: #fdcb6e; }
+
+        .final-results {
+            margin-top: 2rem;
+        }
+
+        .final-results h2 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2rem;
+            }
+            
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Comparison Game - Admin Panel</h1>
-    
-    <div class="section">
-        <h2>Player Registration</h2>
-        <div id="registered-players">
-            <p>Waiting for players to register...</p>
+    <div class="admin-container">
+        <div class="header">
+            <h1 class="title">Comparison Game - Admin Panel</h1>
+            <p>Manage the game and view results</p>
+        </div>
+
+        <!-- Player Registration Section -->
+        <div class="game-section">
+            <h2 class="section-title">Player Registration</h2>
             <table id="players-table">
                 <thead>
                     <tr>
                         <th>Player Name</th>
+                        <th>Strategy</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody id="players-list">
-                    <!-- Player list will be populated here -->
+                    <!-- Players will be listed here -->
                 </tbody>
             </table>
+            <button id="start-game-btn" class="btn btn-primary" disabled>
+                <i class="fas fa-play"></i> Start Game
+            </button>
+            <p id="min-players-warning">At least 2 players needed to start</p>
         </div>
-        <button id="start-game-btn" disabled>Start Game</button>
-        <p id="min-players-warning">At least 2 players needed to start (4 recommended)</p>
-    </div>
-    
-    <div class="section" id="choices-section" style="display: none;">
-        <h2>Player Choices (Round <span id="current-round">1</span>/3)</h2>
-        <div id="choices-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Player</th>
-                        <th>Choice</th>
-                    </tr>
-                </thead>
-                <tbody id="choices-list">
-                    <!-- Choices will be populated here -->
-                </tbody>
-            </table>
+
+        <!-- Current Round Section -->
+        <div class="game-section" id="current-round-section" style="display: none;">
+            <h2 class="section-title">Round <span id="current-round-display">1</span> of 3</h2>
+            <div class="round-tracker">
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
+                <div class="round-dot"></div>
+            </div>
+
+            <!-- Dice Input Section -->
+            <div id="dice-input-section">
+                <h3>Enter Dice Rolls</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Dice 1</th>
+                            <th>Dice 2</th>
+                            <th>Dice 3</th>
+                            <th>Total</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dice-input-list">
+                        <!-- Dice inputs will be listed here -->
+                    </tbody>
+                </table>
+                <button id="calculate-results-btn" class="btn btn-success" disabled>
+                    <i class="fas fa-calculator"></i> Calculate Results
+                </button>
+            </div>
+
+            <!-- Round Results Section -->
+            <div id="round-results-section" style="display: none;">
+                <h3>Round Results</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Total</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody id="round-results-list">
+                        <!-- Round results will be listed here -->
+                    </tbody>
+                </table>
+                <button id="next-round-btn" class="btn btn-primary">
+                    <i class="fas fa-arrow-right"></i> Next Round
+                </button>
+            </div>
         </div>
-        <button id="start-round-btn" disabled>Start Round</button>
-        <p>Waiting for all players to make their choices...</p>
-    </div>
-    
-    <div class="section" id="dice-section" style="display: none;">
-        <h2>Dice Input</h2>
-        <div id="dice-input-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Player</th>
-                        <th>Dice 1</th>
-                        <th>Dice 2</th>
-                        <th>Dice 3</th>
-                        <th>Total</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="dice-list">
-                    <!-- Dice inputs will be populated here -->
-                </tbody>
-            </table>
-        </div>
-        <button id="calculate-results-btn" disabled>Calculate Results</button>
-    </div>
-    
-    <div class="section" id="results-section" style="display: none;">
-        <h2>Round Results (Round <span id="results-round">1</span>/3)</h2>
-        <div id="results-container">
+
+        <!-- Final Results Section -->
+        <div class="game-section final-results" id="final-results-section" style="display: none;">
+            <h2 class="section-title">Final Results</h2>
             <table>
                 <thead>
                     <tr>
                         <th>Rank</th>
                         <th>Player</th>
-                        <th>Total</th>
-                        <th>Points Earned</th>
-                        <th>Prediction Bonus</th>
-                    </tr>
-                </thead>
-                <tbody id="results-list">
-                    <!-- Results will be populated here -->
-                </tbody>
-            </table>
-        </div>
-        <button id="next-round-btn">Next Round</button>
-        <button id="end-game-btn">End Game</button>
-    </div>
-
-    <div class="section" id="final-results-section" style="display: none;">
-        <h2>Final Game Results</h2>
-        <div id="final-results-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Player</th>
+                        <th>Strategy</th>
                         <th>Total Points</th>
-                        <th>Final Bonus</th>
-                        <th>Grand Total</th>
+                        <th>Bonus</th>
+                        <th>Final Score</th>
                     </tr>
                 </thead>
                 <tbody id="final-results-list">
-                    <!-- Final results will be populated here -->
+                    <!-- Final results will be listed here -->
                 </tbody>
             </table>
+            <button id="new-game-btn" class="btn btn-primary">
+                <i class="fas fa-redo"></i> New Game
+            </button>
         </div>
-        <button id="new-game-btn">Start New Game</button>
     </div>
 
     <script>
@@ -130,148 +302,117 @@
             measurementId: "G-N0EBD0YSJ0"
         };
         
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
-        // Database references
-        const gameRef = db.ref('games/comparison');
-        const playersRef = gameRef.child('players');
-        const choicesRef = gameRef.child('choices');
-        const diceRef = gameRef.child('dice');
-        const resultsRef = gameRef.child('results');
-        const roundsRef = gameRef.child('rounds');
-        const gameStateRef = gameRef.child('state');
-        
         // Game state
-        let currentRound = 1;
-        const maxRounds = 3;
         let players = {};
-        let choices = {};
+        let strategies = {};
+        let currentRound = 1;
         let diceResults = {};
         let roundResults = {};
-        let gameActive = false;
         
         // DOM elements
         const playersList = document.getElementById('players-list');
         const startGameBtn = document.getElementById('start-game-btn');
-        const choicesList = document.getElementById('choices-list');
-        const startRoundBtn = document.getElementById('start-round-btn');
-        const diceList = document.getElementById('dice-list');
-        const calculateResultsBtn = document.getElementById('calculate-results-btn');
-        const resultsList = document.getElementById('results-list');
         const minPlayersWarning = document.getElementById('min-players-warning');
-        const currentRoundDisplay = document.getElementById('current-round');
-        const resultsRoundDisplay = document.getElementById('results-round');
-        const finalResultsList = document.getElementById('final-results-list');
-        
-        // Sections
-        const choicesSection = document.getElementById('choices-section');
-        const diceSection = document.getElementById('dice-section');
-        const resultsSection = document.getElementById('results-section');
+        const currentRoundSection = document.getElementById('current-round-section');
+        const currentRoundDisplay = document.getElementById('current-round-display');
+        const roundDots = document.querySelectorAll('.round-dot');
+        const diceInputList = document.getElementById('dice-input-list');
+        const calculateResultsBtn = document.getElementById('calculate-results-btn');
+        const roundResultsSection = document.getElementById('round-results-section');
+        const roundResultsList = document.getElementById('round-results-list');
+        const nextRoundBtn = document.getElementById('next-round-btn');
         const finalResultsSection = document.getElementById('final-results-section');
+        const finalResultsList = document.getElementById('final-results-list');
+        const newGameBtn = document.getElementById('new-game-btn');
         
-        // Listen for player registrations
-        playersRef.on('value', (snapshot) => {
-            players = snapshot.val() || {};
-            updatePlayersList();
+        // Initialize game
+        function initGame() {
+            // Listen for player registrations
+            db.ref('players').on('value', (snapshot) => {
+                players = snapshot.val() || {};
+                updatePlayersList();
+                
+                // Enable start game if enough players
+                if (Object.keys(players).length >= 2) {
+                    startGameBtn.disabled = false;
+                    minPlayersWarning.textContent = `${Object.keys(players).length} players ready!`;
+                    minPlayersWarning.style.color = 'var(--success)';
+                } else {
+                    startGameBtn.disabled = true;
+                    minPlayersWarning.textContent = 'At least 2 players needed to start';
+                    minPlayersWarning.style.color = 'var(--danger)';
+                }
+            });
             
-            // Enable start game button if enough players
-            if (Object.keys(players).length >= 2) {
-                startGameBtn.disabled = false;
-                minPlayersWarning.style.color = 'green';
-                minPlayersWarning.textContent = `Ready to start with ${Object.keys(players).length} players!`;
-            } else {
-                startGameBtn.disabled = true;
-                minPlayersWarning.style.color = 'red';
-                minPlayersWarning.textContent = `At least 2 players needed to start (4 recommended)`;
-            }
-        });
-        
-        // Listen for player choices
-        choicesRef.on('value', (snapshot) => {
-            choices = snapshot.val() || {};
-            updateChoicesList();
+            // Listen for strategy choices
+            db.ref('strategies').on('value', (snapshot) => {
+                strategies = snapshot.val() || {};
+                updatePlayersList();
+            });
             
-            // Check if all players have chosen
-            if (gameActive && Object.keys(choices).length === Object.keys(players).length) {
-                startRoundBtn.disabled = false;
-            }
-        });
-        
-        // Listen for dice submissions
-        diceRef.on('value', (snapshot) => {
-            diceResults = snapshot.val() || {};
+            // Start game button
+            startGameBtn.addEventListener('click', startGame);
             
-            // Check if all players have submitted dice
-            if (gameActive && Object.keys(diceResults).length === Object.keys(players).length) {
-                calculateResultsBtn.disabled = false;
-            }
-        });
+            // Next round button
+            nextRoundBtn.addEventListener('click', nextRound);
+            
+            // New game button
+            newGameBtn.addEventListener('click', resetGame);
+        }
         
-        // Update players list display
+        // Update players list
         function updatePlayersList() {
             playersList.innerHTML = '';
-            for (const [id, player] of Object.entries(players)) {
+            for (const [playerId, player] of Object.entries(players)) {
                 const row = document.createElement('tr');
+                const strategy = strategies[playerId]?.strategy || 'Not chosen';
+                const strategyClass = strategy.toLowerCase();
+                
                 row.innerHTML = `
                     <td>${player.name}</td>
+                    <td><span class="player-choice ${strategyClass}">${strategy}</span></td>
                     <td>Registered</td>
                 `;
                 playersList.appendChild(row);
             }
         }
         
-        // Update choices list display
-        function updateChoicesList() {
-            choicesList.innerHTML = '';
-            for (const [playerId, choice] of Object.entries(choices)) {
-                const playerName = players[playerId]?.name || playerId;
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${playerName}</td>
-                    <td><span class="player-choice ${choice}">${choice.toUpperCase()}</span></td>
-                `;
-                choicesList.appendChild(row);
-            }
-        }
-        
         // Start the game
-        startGameBtn.addEventListener('click', () => {
-            gameActive = true;
+        function startGame() {
+            currentRound = 1;
             startGameBtn.disabled = true;
-            choicesSection.style.display = 'block';
-            currentRoundDisplay.textContent = currentRound;
+            currentRoundSection.style.display = 'block';
+            updateRoundDisplay();
             
-            // Set game state to "choosing"
-            gameStateRef.set({
-                status: 'choosing',
-                round: currentRound
-            });
-            
-            // Clear previous choices and dice results
-            choicesRef.remove();
-            diceRef.remove();
-        });
-        
-        // Start the round (dice input)
-        startRoundBtn.addEventListener('click', () => {
-            choicesSection.style.display = 'none';
-            diceSection.style.display = 'block';
-            startRoundBtn.disabled = true;
-            
-            // Set game state to "rolling"
-            gameStateRef.set({
-                status: 'rolling',
+            // Set game state to first round
+            db.ref('gameState').set({
+                status: 'dice',
                 round: currentRound
             });
             
             setupDiceInputs();
-        });
+        }
         
-        // Set up dice inputs
+        // Update round display
+        function updateRoundDisplay() {
+            currentRoundDisplay.textContent = currentRound;
+            roundDots.forEach((dot, index) => {
+                dot.classList.remove('active', 'completed');
+                if (index + 1 === currentRound) {
+                    dot.classList.add('active');
+                } else if (index + 1 < currentRound) {
+                    dot.classList.add('completed');
+                }
+            });
+        }
+        
+        // Set up dice inputs for current round
         function setupDiceInputs() {
-            diceList.innerHTML = '';
+            diceInputList.innerHTML = '';
+            diceResults = {};
             
             for (const [playerId, player] of Object.entries(players)) {
                 const row = document.createElement('tr');
@@ -280,19 +421,19 @@
                     <td><input type="number" min="1" max="6" class="dice-1" data-player="${playerId}"></td>
                     <td><input type="number" min="1" max="6" class="dice-2" data-player="${playerId}"></td>
                     <td><input type="number" min="1" max="6" class="dice-3" data-player="${playerId}"></td>
-                    <td class="total" id="total-${playerId}">0</td>
+                    <td class="total" data-player="${playerId}">0</td>
                     <td><button class="confirm-dice" data-player="${playerId}">Confirm</button></td>
                 `;
-                diceList.appendChild(row);
+                diceInputList.appendChild(row);
                 
-                // Add event listeners to dice inputs
+                // Add event listeners
                 const dice1 = row.querySelector('.dice-1');
                 const dice2 = row.querySelector('.dice-2');
                 const dice3 = row.querySelector('.dice-3');
                 const confirmBtn = row.querySelector('.confirm-dice');
                 const totalCell = row.querySelector('.total');
                 
-                // Calculate total when any dice changes
+                // Update total when dice values change
                 [dice1, dice2, dice3].forEach(dice => {
                     dice.addEventListener('change', () => {
                         const total = parseInt(dice1.value || 0) + parseInt(dice2.value || 0) + parseInt(dice3.value || 0);
@@ -302,288 +443,316 @@
                 
                 // Confirm dice values
                 confirmBtn.addEventListener('click', () => {
-                    const dice1Val = parseInt(dice1.value);
-                    const dice2Val = parseInt(dice2.value);
-                    const dice3Val = parseInt(dice3.value);
+                    const d1 = parseInt(dice1.value);
+                    const d2 = parseInt(dice2.value);
+                    const d3 = parseInt(dice3.value);
                     
-                    if (isNaN(dice1Val) || dice1Val < 1 || dice1Val > 6) {
-                        alert('Please enter a valid number (1-6) for Dice 1');
+                    if (isNaN(d1) {
+                        alert('Please enter a value for Dice 1');
                         return;
                     }
-                    if (isNaN(dice2Val) || dice2Val < 1 || dice2Val > 6) {
-                        alert('Please enter a valid number (1-6) for Dice 2');
+                    if (isNaN(d2)) {
+                        alert('Please enter a value for Dice 2');
                         return;
                     }
-                    if (isNaN(dice3Val) || dice3Val < 1 || dice3Val > 6) {
-                        alert('Please enter a valid number (1-6) for Dice 3');
+                    if (isNaN(d3)) {
+                        alert('Please enter a value for Dice 3');
                         return;
                     }
                     
-                    const total = dice1Val + dice2Val + dice3Val;
-                    
-                    // Save dice results to Firebase
-                    diceRef.child(playerId).set({
-                        dice: [dice1Val, dice2Val, dice3Val],
+                    const total = d1 + d2 + d3;
+                    diceResults[playerId] = {
+                        name: player.name,
+                        dice: [d1, d2, d3],
                         total: total
-                    });
+                    };
                     
-                    // Disable inputs for this player
+                    // Disable inputs
                     dice1.disabled = true;
                     dice2.disabled = true;
                     dice3.disabled = true;
                     confirmBtn.disabled = true;
+                    
+                    // Check if all players have submitted
+                    if (Object.keys(diceResults).length === Object.keys(players).length) {
+                        calculateResultsBtn.disabled = false;
+                    }
                 });
-            };
+            }
         }
         
-        // Calculate results
-        calculateResultsBtn.addEventListener('click', () => {
-            diceSection.style.display = 'none';
-            resultsSection.style.display = 'block';
-            resultsRoundDisplay.textContent = currentRound;
-            calculateResultsBtn.disabled = true;
-            
-            calculateResults();
-        });
-        
-        // Calculate and display results
-        function calculateResults() {
-            // Create array of players with their totals and choices
-            const playerData = [];
-            
-            for (const [playerId, player] of Object.entries(players)) {
-                playerData.push({
-                    id: playerId,
-                    name: player.name,
-                    total: diceResults[playerId]?.total || 0,
-                    choice: choices[playerId] || 'none'
-                });
-            }
+        // Calculate round results
+        function calculateRoundResults() {
+            // Convert dice results to array for sorting
+            const resultsArray = Object.entries(diceResults).map(([playerId, data]) => ({
+                playerId,
+                name: data.name,
+                total: data.total
+            }));
             
             // Sort by total (descending)
-            playerData.sort((a, b) => b.total - a.total);
+            resultsArray.sort((a, b) => b.total - a.total);
             
-            // Assign ranks (handling ties)
+            // Assign ranks (handle ties)
             let currentRank = 1;
-            for (let i = 0; i < playerData.length; i++) {
-                if (i > 0 && playerData[i].total === playerData[i - 1].total) {
-                    playerData[i].rank = playerData[i - 1].rank;
+            const rankedResults = {};
+            for (let i = 0; i < resultsArray.length; i++) {
+                const result = resultsArray[i];
+                if (i > 0 && result.total === resultsArray[i-1].total) {
+                    // Tie with previous player
+                    result.rank = resultsArray[i-1].rank;
                 } else {
-                    playerData[i].rank = currentRank;
+                    result.rank = currentRank;
                 }
                 currentRank++;
+                
+                // Assign points based on rank
+                if (result.rank === 1) {
+                    result.points = 6;
+                } else if (result.rank === 2) {
+                    result.points = 3;
+                } else if (result.rank === 3) {
+                    result.points = 1;
+                } else {
+                    result.points = 0;
+                }
+                
+                rankedResults[result.playerId] = {
+                    name: result.name,
+                    total: result.total,
+                    rank: result.rank,
+                    points: result.points
+                };
             }
             
-            // Calculate points based on ranks
-            const rankGroups = {};
-            playerData.forEach(player => {
-                if (!rankGroups[player.rank]) {
-                    rankGroups[player.rank] = [];
-                }
-                rankGroups[player.rank].push(player);
-            });
-            
-            // Assign points based on rank groups
-            const pointsMap = {
-                1: 6,  // 1st place
-                2: 3,  // 2nd place
-                3: 1,  // 3rd place
-                4: 0   // 4th place
-            };
-            
-            Object.keys(rankGroups).forEach(rank => {
-                const playersInRank = rankGroups[rank];
-                const rankNum = parseInt(rank);
-                
-                // Calculate total points for this rank group
-                let totalPoints = 0;
-                let pointPositions = [];
-                
-                for (let i = 0; i < playersInRank.length; i++) {
-                    const position = rankNum + i;
-                    if (pointsMap[position] !== undefined) {
-                        totalPoints += pointsMap[position];
-                        pointPositions.push(position);
-                    }
-                }
-                
-                // Distribute points evenly among tied players
-                const pointsPerPlayer = totalPoints / playersInRank.length;
-                
-                playersInRank.forEach(player => {
-                    // Check for prediction bonuses
-                    let bonus = 0;
-                    let bonusReason = '';
-                    
-                    if (player.choice === 'max' && player.rank === 1) {
-                        bonus = pointsPerPlayer; // Double points
-                        bonusReason = 'Correct MAX prediction';
-                    } else if (player.choice === 'min' && player.rank === playerData.length) {
-                        bonus = pointsPerPlayer; // Double points
-                        bonusReason = 'Correct MIN prediction';
-                    } else if (player.choice === 'mid') {
-                        // Check if player is in the middle (not first or last)
-                        if (player.rank > 1 && player.rank < playerData.length) {
-                            bonus = pointsPerPlayer; // Double points
-                            bonusReason = 'Correct MID prediction';
-                        }
-                    } else if (player.choice === 'zero' && pointsPerPlayer === 0) {
-                        bonus = 45; // Special zero bonus
-                        bonusReason = 'ZERO bonus';
-                    }
-                    
-                    player.points = pointsPerPlayer;
-                    player.bonus = bonus;
-                    player.bonusReason = bonusReason;
-                    player.totalPoints = pointsPerPlayer + bonus;
-                    player.pointPositions = pointPositions.join(', ');
-                });
-            });
-            
-            // Save round results to Firebase
-            const roundResults = {};
-            playerData.forEach(player => {
-                roundResults[player.id] = {
-                    name: player.name,
-                    rank: player.rank,
-                    total: player.total,
-                    points: player.points,
-                    bonus: player.bonus,
-                    totalPoints: player.totalPoints,
-                    choice: player.choice,
-                    bonusReason: player.bonusReason
-                };
-            });
-            
-            roundsRef.child(`round${currentRound}`).set(roundResults);
+            // Save round results
+            db.ref(`rounds/round${currentRound}`).set(rankedResults);
             
             // Display results
-            resultsList.innerHTML = '';
-            playerData.forEach(player => {
+            displayRoundResults(rankedResults);
+        }
+        
+        // Display round results
+        function displayRoundResults(results) {
+            diceInputSection.style.display = 'none';
+            roundResultsSection.style.display = 'block';
+            roundResultsList.innerHTML = '';
+            
+            // Convert to array and sort by rank
+            const resultsArray = Object.values(results).sort((a, b) => a.rank - b.rank);
+            
+            for (const result of resultsArray) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${player.rank}</td>
-                    <td>${player.name} (${player.choice})</td>
-                    <td>${player.total}</td>
-                    <td>${player.points.toFixed(1)}</td>
-                    <td>${player.bonus > 0 ? `${player.bonus} (${player.bonusReason})` : 'None'}</td>
+                    <td>${result.rank}</td>
+                    <td>${result.name}</td>
+                    <td>${result.total}</td>
+                    <td>${result.points.toFixed(1)}</td>
                 `;
-                resultsList.appendChild(row);
-            });
+                roundResultsList.appendChild(row);
+            }
             
-            // Set game state to "results"
-            gameStateRef.set({
+            // Set game state to results
+            db.ref('gameState').set({
                 status: 'results',
                 round: currentRound
             });
         }
         
-        // Next round button
-        document.getElementById('next-round-btn').addEventListener('click', () => {
+        // Move to next round
+        function nextRound() {
             currentRound++;
-            
-            if (currentRound <= maxRounds) {
-                // Prepare for next round
-                resultsSection.style.display = 'none';
-                choicesSection.style.display = 'block';
-                currentRoundDisplay.textContent = currentRound;
+            if (currentRound <= 3) {
+                roundResultsSection.style.display = 'none';
+                diceInputSection.style.display = 'block';
+                calculateResultsBtn.disabled = true;
+                updateRoundDisplay();
                 
-                // Clear previous choices and dice results
-                choicesRef.remove();
-                diceRef.remove();
-                
-                // Set game state to "choosing"
-                gameStateRef.set({
-                    status: 'choosing',
+                // Set game state to next round
+                db.ref('gameState').set({
+                    status: 'dice',
                     round: currentRound
                 });
-            } else {
-                // Game is over, show final results
-                showFinalResults();
-            }
-        });
-        
-        // Show final results after all rounds
-        function showFinalResults() {
-            resultsSection.style.display = 'none';
-            finalResultsSection.style.display = 'block';
-            
-            // Calculate total points across all rounds
-            roundsRef.once('value').then(snapshot => {
-                const allRounds = snapshot.val() || {};
-                const playerTotals = {};
                 
-                // Sum points across all rounds for each player
-                for (const [roundKey, round] of Object.entries(allRounds)) {
-                    for (const [playerId, player] of Object.entries(round)) {
+                setupDiceInputs();
+            } else {
+                calculateFinalResults();
+            }
+        }
+        
+        // Calculate final results with bonuses
+        function calculateFinalResults() {
+            // Get all round results
+            const allRounds = {};
+            const playerTotals = {};
+            
+            // First get all rounds data
+            const roundsPromise = db.ref('rounds').once('value').then(snapshot => {
+                const roundsData = snapshot.val() || {};
+                
+                // Calculate total points for each player
+                for (const [roundKey, round] of Object.entries(roundsData)) {
+                    for (const [playerId, result] of Object.entries(round)) {
                         if (!playerTotals[playerId]) {
                             playerTotals[playerId] = {
-                                name: player.name,
+                                name: result.name,
                                 totalPoints: 0,
-                                totalBonus: 0
+                                rounds: []
                             };
                         }
-                        playerTotals[playerId].totalPoints += player.points;
-                        playerTotals[playerId].totalBonus += player.bonus;
+                        playerTotals[playerId].totalPoints += result.points;
+                        playerTotals[playerId].rounds.push({
+                            round: parseInt(roundKey.replace('round', '')),
+                            points: result.points,
+                            rank: result.rank
+                        });
                     }
                 }
                 
-                // Display final results
-                finalResultsList.innerHTML = '';
-                for (const [playerId, player] of Object.entries(playerTotals)) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${player.name}</td>
-                        <td>${player.totalPoints.toFixed(1)}</td>
-                        <td>${player.totalBonus.toFixed(1)}</td>
-                        <td><strong>${(player.totalPoints + player.totalBonus).toFixed(1)}</strong></td>
-                    `;
-                    finalResultsList.appendChild(row);
+                // Get strategies
+                return db.ref('strategies').once('value');
+            }).then(strategiesSnapshot => {
+                const strategies = strategiesSnapshot.val() || {};
+                
+                // Assign strategies to players
+                for (const [playerId, strategy] of Object.entries(strategies)) {
+                    if (playerTotals[playerId]) {
+                        playerTotals[playerId].strategy = strategy.strategy;
+                    }
                 }
                 
-                // Set game state to "finished"
-                gameStateRef.set({
-                    status: 'finished',
+                // Convert to array for sorting
+                const finalResultsArray = Object.entries(playerTotals).map(([playerId, data]) => ({
+                    playerId,
+                    ...data
+                }));
+                
+                // Sort by total points (descending)
+                finalResultsArray.sort((a, b) => b.totalPoints - a.totalPoints);
+                
+                // Assign final ranks (handle ties)
+                let currentRank = 1;
+                const rankedFinalResults = {};
+                for (let i = 0; i < finalResultsArray.length; i++) {
+                    const result = finalResultsArray[i];
+                    if (i > 0 && result.totalPoints === finalResultsArray[i-1].totalPoints) {
+                        // Tie with previous player
+                        result.finalRank = finalResultsArray[i-1].finalRank;
+                    } else {
+                        result.finalRank = currentRank;
+                    }
+                    currentRank++;
+                    
+                    // Calculate bonus based on strategy
+                    let bonus = 0;
+                    let bonusMessage = '';
+                    
+                    if (result.strategy === 'max') {
+                        if (result.finalRank === 1) {
+                            bonus = result.totalPoints;
+                            bonusMessage = "MAX strategy: Achieved 1st place overall";
+                        } else {
+                            bonusMessage = "MAX strategy: Didn't achieve 1st place";
+                        }
+                    } else if (result.strategy === 'min') {
+                        if (result.finalRank === finalResultsArray.length && result.totalPoints > 0) {
+                            bonus = result.totalPoints;
+                            bonusMessage = "MIN strategy: Had lowest score (non-zero)";
+                        } else {
+                            bonusMessage = "MIN strategy: Wasn't lowest or had zero points";
+                        }
+                    } else if (result.strategy === 'mid') {
+                        if (result.finalRank > 1 && result.finalRank < finalResultsArray.length) {
+                            bonus = result.totalPoints;
+                            bonusMessage = "MID strategy: Was in the middle overall";
+                        } else {
+                            bonusMessage = "MID strategy: Wasn't in the middle";
+                        }
+                    } else if (result.strategy === 'zero') {
+                        if (result.totalPoints === 0) {
+                            bonus = 45;
+                            bonusMessage = "ZERO strategy: Ended with zero points";
+                        } else {
+                            bonusMessage = "ZERO strategy: Didn't end with zero points";
+                        }
+                    }
+                    
+                    rankedFinalResults[result.playerId] = {
+                        name: result.name,
+                        strategy: result.strategy,
+                        totalPoints: result.totalPoints,
+                        bonus: bonus,
+                        finalScore: result.totalPoints + bonus,
+                        bonusMessage: bonusMessage,
+                        finalRank: result.finalRank
+                    };
+                }
+                
+                // Save final results
+                return db.ref('finalResults').set(rankedFinalResults);
+            }).then(() => {
+                // Display final results
+                displayFinalResults();
+                
+                // Set game state to final
+                db.ref('gameState').set({
+                    status: 'final',
                     round: 'final'
                 });
             });
         }
         
-        // End game button
-        document.getElementById('end-game-btn').addEventListener('click', () => {
-            if (confirm('Are you sure you want to end the game early?')) {
-                showFinalResults();
-            }
-        });
+        // Display final results
+        function displayFinalResults() {
+            roundResultsSection.style.display = 'none';
+            currentRoundSection.style.display = 'none';
+            finalResultsSection.style.display = 'block';
+            
+            db.ref('finalResults').once('value').then(snapshot => {
+                const finalResults = snapshot.val() || {};
+                
+                // Convert to array and sort by final rank
+                const resultsArray = Object.values(finalResults).sort((a, b) => a.finalRank - b.finalRank);
+                
+                finalResultsList.innerHTML = '';
+                for (const result of resultsArray) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${result.finalRank}</td>
+                        <td>${result.name}</td>
+                        <td class="${result.strategy}">${result.strategy.toUpperCase()}</td>
+                        <td>${result.totalPoints.toFixed(1)}</td>
+                        <td>${result.bonus.toFixed(1)}</td>
+                        <td><strong>${result.finalScore.toFixed(1)}</strong></td>
+                    `;
+                    finalResultsList.appendChild(row);
+                }
+            });
+        }
         
-        // New game button
-        document.getElementById('new-game-btn').addEventListener('click', () => {
-            if (confirm('Start a new game? All current data will be reset.')) {
-                // Reset game state
-                currentRound = 1;
-                gameActive = false;
+        // Reset game
+        function resetGame() {
+            if (confirm('Are you sure you want to start a new game? All current data will be reset.')) {
+                // Reset all game data in Firebase
+                db.ref('players').remove();
+                db.ref('strategies').remove();
+                db.ref('dice').remove();
+                db.ref('rounds').remove();
+                db.ref('finalResults').remove();
+                db.ref('gameState').remove();
                 
-                // Clear all game data
-                gameRef.remove();
-                
-                // Hide all sections except registration
-                choicesSection.style.display = 'none';
-                diceSection.style.display = 'none';
-                resultsSection.style.display = 'none';
+                // Reset UI
                 finalResultsSection.style.display = 'none';
-                
-                // Reset buttons
+                currentRoundSection.style.display = 'none';
                 startGameBtn.disabled = true;
-                startRoundBtn.disabled = true;
-                calculateResultsBtn.disabled = true;
-                
-                // Reset displays
-                currentRoundDisplay.textContent = currentRound;
-                resultsRoundDisplay.textContent = currentRound;
-                minPlayersWarning.style.color = 'red';
-                minPlayersWarning.textContent = 'At least 2 players needed to start (4 recommended)';
+                minPlayersWarning.textContent = 'At least 2 players needed to start';
+                minPlayersWarning.style.color = 'var(--danger)';
+                playersList.innerHTML = '';
             }
-        });
+        }
+        
+        // Initialize the game
+        initGame();
     </script>
 </body>
 </html>
