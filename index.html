@@ -124,11 +124,9 @@
             background-color: #f1f1f1;
         }
 
-        input[type="number"] {
-            width: 60px;
-            padding: 8px;
-            border: 2px solid var(--secondary);
-            border-radius: 5px;
+        .dice-value {
+            font-weight: bold;
+            text-align: center;
         }
 
         .round-tracker {
@@ -171,6 +169,24 @@
             margin-bottom: 1rem;
         }
 
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .status-waiting {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+
+        .status-ready {
+            background-color: var(--success);
+            color: white;
+        }
+
         @media (max-width: 768px) {
             .title {
                 font-size: 2rem;
@@ -187,7 +203,7 @@
     <div class="admin-container">
         <div class="header">
             <h1 class="title">Comparison Game - Admin Panel</h1>
-            <p>Manage the game and view results</p>
+            <p>Control the game flow and view results</p>
         </div>
 
         <!-- Player Registration Section -->
@@ -220,9 +236,9 @@
                 <div class="round-dot"></div>
             </div>
 
-            <!-- Dice Input Section -->
-            <div id="dice-input-section">
-                <h3>Enter Dice Rolls</h3>
+            <!-- Player Submissions Section -->
+            <div id="player-submissions-section">
+                <h3>Player Submissions</h3>
                 <table>
                     <thead>
                         <tr>
@@ -231,11 +247,11 @@
                             <th>Dice 2</th>
                             <th>Dice 3</th>
                             <th>Total</th>
-                            <th>Action</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
-                    <tbody id="dice-input-list">
-                        <!-- Dice inputs will be listed here -->
+                    <tbody id="player-submissions-list">
+                        <!-- Player submissions will appear here -->
                     </tbody>
                 </table>
                 <button id="calculate-results-btn" class="btn btn-success" disabled>
@@ -309,7 +325,7 @@
         let players = {};
         let strategies = {};
         let currentRound = 1;
-        let diceResults = {};
+        let playerSubmissions = {};
         let roundResults = {};
         
         // DOM elements
@@ -319,7 +335,7 @@
         const currentRoundSection = document.getElementById('current-round-section');
         const currentRoundDisplay = document.getElementById('current-round-display');
         const roundDots = document.querySelectorAll('.round-dot');
-        const diceInputList = document.getElementById('dice-input-list');
+        const playerSubmissionsList = document.getElementById('player-submissions-list');
         const calculateResultsBtn = document.getElementById('calculate-results-btn');
         const roundResultsSection = document.getElementById('round-results-section');
         const roundResultsList = document.getElementById('round-results-list');
@@ -363,7 +379,7 @@
             newGameBtn.addEventListener('click', resetGame);
         }
         
-        // Update players list with names from Firebase
+        // Update players list
         function updatePlayersList() {
             playersList.innerHTML = '';
             for (const [playerId, player] of Object.entries(players)) {
@@ -393,7 +409,7 @@
                 round: currentRound
             });
             
-            setupDiceInputs();
+            setupRound();
         }
         
         // Update round display
@@ -409,85 +425,82 @@
             });
         }
         
-        // Set up dice inputs for current round with player names
-        function setupDiceInputs() {
-            diceInputList.innerHTML = '';
-            diceResults = {};
+        // Set up the current round
+        function setupRound() {
+            playerSubmissions = {};
+            playerSubmissionsList.innerHTML = '';
             
-            for (const [playerId, player] of Object.entries(players)) {
+            // Listen for dice submissions from players
+            db.ref(`dice/round${currentRound}`).on('value', (snapshot) => {
+                const submissions = snapshot.val() || {};
+                playerSubmissions = submissions;
+                
+                // Update the submissions table
+                updateSubmissionsTable();
+                
+                // Enable calculate button if all players have submitted
+                if (Object.keys(playerSubmissions).length === Object.keys(players).length) {
+                    calculateResultsBtn.disabled = false;
+                } else {
+                    calculateResultsBtn.disabled = true;
+                }
+            });
+        }
+        
+        // Update the player submissions table
+        function updateSubmissionsTable() {
+            playerSubmissionsList.innerHTML = '';
+            
+            for (const [playerId, submission] of Object.entries(playerSubmissions)) {
+                const player = players[playerId];
                 const row = document.createElement('tr');
+                
                 row.innerHTML = `
                     <td>${player.name}</td>
-                    <td><input type="number" min="1" max="6" class="dice-1" data-player="${playerId}"></td>
-                    <td><input type="number" min="1" max="6" class="dice-2" data-player="${playerId}"></td>
-                    <td><input type="number" min="1" max="6" class="dice-3" data-player="${playerId}"></td>
-                    <td class="total" data-player="${playerId}">0</td>
-                    <td><button class="confirm-dice" data-player="${playerId}">Confirm</button></td>
+                    <td class="dice-value">${submission.dice[0] || '-'}</td>
+                    <td class="dice-value">${submission.dice[1] || '-'}</td>
+                    <td class="dice-value">${submission.dice[2] || '-'}</td>
+                    <td class="dice-value">${submission.total || '0'}</td>
+                    <td>
+                        <span class="status-badge ${submission.total ? 'status-ready' : 'status-waiting'}">
+                            ${submission.total ? 'Ready' : 'Waiting'}
+                        </span>
+                    </td>
                 `;
-                diceInputList.appendChild(row);
                 
-                // Add event listeners
-                const dice1 = row.querySelector('.dice-1');
-                const dice2 = row.querySelector('.dice-2');
-                const dice3 = row.querySelector('.dice-3');
-                const confirmBtn = row.querySelector('.confirm-dice');
-                const totalCell = row.querySelector('.total');
-                
-                // Update total when dice values change
-                [dice1, dice2, dice3].forEach(dice => {
-                    dice.addEventListener('change', () => {
-                        const total = parseInt(dice1.value || 0) + parseInt(dice2.value || 0) + parseInt(dice3.value || 0);
-                        totalCell.textContent = total;
-                    });
-                });
-                
-                // Confirm dice values
-                confirmBtn.addEventListener('click', () => {
-                    const d1 = parseInt(dice1.value);
-                    const d2 = parseInt(dice2.value);
-                    const d3 = parseInt(dice3.value);
+                playerSubmissionsList.appendChild(row);
+            }
+            
+            // Add rows for players who haven't submitted yet
+            for (const [playerId, player] of Object.entries(players)) {
+                if (!playerSubmissions[playerId]) {
+                    const row = document.createElement('tr');
                     
-                    if (isNaN(d1)) {
-                        alert('Please enter a value for Dice 1');
-                        return;
-                    }
-                    if (isNaN(d2)) {
-                        alert('Please enter a value for Dice 2');
-                        return;
-                    }
-                    if (isNaN(d3)) {
-                        alert('Please enter a value for Dice 3');
-                        return;
-                    }
+                    row.innerHTML = `
+                        <td>${player.name}</td>
+                        <td class="dice-value">-</td>
+                        <td class="dice-value">-</td>
+                        <td class="dice-value">-</td>
+                        <td class="dice-value">0</td>
+                        <td>
+                            <span class="status-badge status-waiting">
+                                Waiting
+                            </span>
+                        </td>
+                    `;
                     
-                    const total = d1 + d2 + d3;
-                    diceResults[playerId] = {
-                        name: player.name,  // Using player name from Firebase
-                        dice: [d1, d2, d3],
-                        total: total
-                    };
-                    
-                    // Disable inputs
-                    dice1.disabled = true;
-                    dice2.disabled = true;
-                    dice3.disabled = true;
-                    confirmBtn.disabled = true;
-                    
-                    // Check if all players have submitted
-                    if (Object.keys(diceResults).length === Object.keys(players).length) {
-                        calculateResultsBtn.disabled = false;
-                    }
-                });
+                    playerSubmissionsList.appendChild(row);
+                }
             }
         }
         
         // Calculate round results
         function calculateRoundResults() {
-            // Convert dice results to array for sorting
-            const resultsArray = Object.entries(diceResults).map(([playerId, data]) => ({
+            // Convert submissions to array for sorting
+            const resultsArray = Object.entries(playerSubmissions).map(([playerId, data]) => ({
                 playerId,
-                name: data.name,
-                total: data.total
+                name: players[playerId]?.name || 'Unknown',
+                total: data.total || 0
             }));
             
             // Sort by total (descending)
@@ -530,11 +543,14 @@
             
             // Display results
             displayRoundResults(rankedResults);
+            
+            // Stop listening to dice submissions for this round
+            db.ref(`dice/round${currentRound}`).off();
         }
         
-        // Display round results with player names
+        // Display round results
         function displayRoundResults(results) {
-            diceInputSection.style.display = 'none';
+            playerSubmissionsSection.style.display = 'none';
             roundResultsSection.style.display = 'block';
             roundResultsList.innerHTML = '';
             
@@ -564,7 +580,7 @@
             currentRound++;
             if (currentRound <= 3) {
                 roundResultsSection.style.display = 'none';
-                diceInputSection.style.display = 'block';
+                playerSubmissionsSection.style.display = 'block';
                 calculateResultsBtn.disabled = true;
                 updateRoundDisplay();
                 
@@ -574,7 +590,7 @@
                     round: currentRound
                 });
                 
-                setupDiceInputs();
+                setupRound();
             } else {
                 calculateFinalResults();
             }
@@ -699,7 +715,7 @@
             });
         }
         
-        // Display final results with player names
+        // Display final results
         function displayFinalResults() {
             roundResultsSection.style.display = 'none';
             currentRoundSection.style.display = 'none';
