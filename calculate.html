@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Score Tracker</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #ff9f1c;
+            --accent-color: #2ec4b6;
+            --dark-color: #166088;
+            --light-color: #e8f7ee;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            margin-bottom: 25px;
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: var(--dark-color);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        button {
+            padding: 10px 18px;
+            margin-right: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        button.primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        button.primary:hover {
+            background-color: var(--dark-color);
+            transform: translateY(-1px);
+        }
+        
+        button.danger {
+            background-color: #e63946;
+            color: white;
+        }
+        
+        button.danger:hover {
+            background-color: #c1121f;
+            transform: translateY(-1px);
+        }
+        
+        button.success {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        
+        button.success:hover {
+            background-color: #1b9aaa;
+            transform: translateY(-1px);
+        }
+        
+        button.secondary {
+            background-color: var(--secondary-color);
+            color: #333;
+        }
+        
+        button.secondary:hover {
+            background-color: #ffbf69;
+            transform: translateY(-1px);
+        }
+        
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 120px;
+        }
+        
+        .edit-btn {
+            padding: 6px 10px;
+            font-size: 13px;
+            margin-left: 5px;
+            background-color: var(--accent-color);
+            color: white;
+        }
+        
+        .round-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .round-selector {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-weight: 600;
+        }
+        
+        .player-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .player-tag {
+            background-color: var(--light-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .remove-player {
+            background: none;
+            border: none;
+            color: #e63946;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 0;
+            font-size: 16px;
+        }
+        
+        .edit-name {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            padding: 0;
+            font-size: 14px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .winner {
+            background-color: rgba(46, 196, 182, 0.2) !important;
+            font-weight: bold;
+        }
+        
+        .game-icon {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+        
+        @media (max-width: 600px) {
+            .round-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1><span class="game-icon">🎮</span> Game Score Tracker</h1>
+    
+    <div id="setup-container" class="container">
+        <h2><span class="game-icon">👥</span> Player Setup</h2>
+        <div id="player-inputs">
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" placeholder="Player name" class="player-name" style="flex-grow: 1;">
+                <button onclick="addPlayer()" class="success">Add Player</button>
+            </div>
+        </div>
+        <div id="players-display" class="player-list"></div>
+        <button onclick="startGame()" id="start-game-btn" class="primary" disabled>Start Game</button>
+    </div>
+    
+    <div id="game-container" class="container" style="display: none;">
+        <div class="round-header">
+            <h2 style="margin: 0;"><span class="game-icon">🏆</span> Round <span id="round-number">1</span></h2>
+            <select id="round-selector" class="round-selector" onchange="loadRound(this.value)"></select>
+        </div>
+        <table id="score-table">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Round Score</th>
+                    <th>Total Score</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="score-body">
+                <!-- Scores will be added here -->
+            </tbody>
+        </table>
+        <div class="action-buttons">
+            <button onclick="nextRound()" class="secondary">Next Round ➡️</button>
+            <button onclick="endGame()" class="danger">End Game 🏁</button>
+        </div>
+    </div>
+    
+    <div id="results-container" class="container" style="display: none;">
+        <h2><span class="game-icon">🎉</span> Final Results</h2>
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Player</th>
+                    <th>Total Score</th>
+                </tr>
+            </thead>
+            <tbody id="results-body">
+                <!-- Results will be added here -->
+            </tbody>
+        </table>
+        <div style="text-align: center; margin-top: 20px;">
+            <button onclick="newGame()" class="primary">Start New Game 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        let players = [];
+        let currentRound = 1;
+        let scores = [];
+        let editingRound = 1;
+        
+        function addPlayer() {
+            const nameInput = document.querySelector('.player-name');
+            const name = nameInput.value.trim();
+            
+            if (name && !players.includes(name)) {
+                players.push(name);
+                nameInput.value = '';
+                updatePlayerDisplay();
+                document.getElementById('start-game-btn').disabled = players.length === 0;
+            } else if (players.includes(name)) {
+                alert("This player name already exists!");
+            }
+        }
+        
+        function updatePlayerDisplay() {
+            const playerDisplay = document.getElementById('players-display');
+            playerDisplay.innerHTML = '';
+            
+            players.forEach((player, index) => {
+                const playerTag = document.createElement('div');
+                playerTag.className = 'player-tag';
+                playerTag.innerHTML = `
+                    ${player}
+                    <button class="edit-name" onclick="editPlayerName(${index})">✏️</button>
+                    <button class="remove-player" onclick="removePlayer(${index})">×</button>
+                `;
+                playerDisplay.appendChild(playerTag);
+            });
+        }
+        
+        function editPlayerName(index) {
+            const newName = prompt("Enter new name for player:", players[index]);
+            if (newName && newName.trim() && !players.includes(newName.trim())) {
+                players[index] = newName.trim();
+                updatePlayerDisplay();
+                
+                // Update scores if game has started
+                if (scores.length > 0) {
+                    for (let round in scores) {
+                        if (scores[round][players[index]] === undefined) {
+                            scores[round][players[index]] = scores[round][players[index]] || 0;
+                            delete scores[round][players[index]];
+                        }
+                    }
+                    updateScoreTable();
+                }
+            } else if (players.includes(newName.trim())) {
+                alert("This player name already exists!");
+            }
+        }
+        
+        function removePlayer(index) {
+            if (confirm(`Remove player ${players[index]}?`)) {
+                players.splice(index, 1);
+                updatePlayerDisplay();
+                document.getElementById('start-game-btn').disabled = players.length === 0;
+                
+                // Update scores if game has started
+                if (scores.length > 0) {
+                    updateScoreTable();
+                }
+            }
+        }
+        
+        function startGame() {
+            document.getElementById('setup-container').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            
+            // Initialize scores for round 1
+            scores[currentRound] = {};
+            players.forEach(player => {
+                scores[currentRound][player] = 0;
+            });
+            
+            updateRoundSelector();
+            updateScoreTable();
+        }
+        
+        function updateRoundSelector() {
+            const selector = document.getElementById('round-selector');
+            selector.innerHTML = '';
+            
+            for (let i = 1; i <= currentRound; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Round ${i}`;
+                if (i === editingRound) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            }
+        }
+        
+        function loadRound(roundNumber) {
+            editingRound = parseInt(roundNumber);
+            updateScoreTable();
+        }
+        
+        function updateScoreTable() {
+            const scoreBody = document.getElementById('score-body');
+            scoreBody.innerHTML = '';
+            
+            document.getElementById('round-number').textContent = editingRound;
+            
+            // Calculate totals for each player
+            const playerTotals = {};
+            players.forEach(player => {
+                playerTotals[player] = 0;
+                for (let round = 1; round <= currentRound; round++) {
+                    playerTotals[player] += scores[round][player] || 0;
+                }
+            });
+            
+            // Sort players by their total score (for display)
+            const sortedPlayers = [...players].sort((a, b) => playerTotals[b] - playerTotals[a]);
+            
+            sortedPlayers.forEach((player, index) => {
+                const row = document.createElement('tr');
+                if (index === 0 && editingRound === currentRound) {
+                    row.classList.add('winner');
+                }
+                
+                // Player name
+                const nameCell = document.createElement('td');
+                nameCell.textContent = player;
+                row.appendChild(nameCell);
+                
+                // Current round score input
+                const roundScoreCell = document.createElement('td');
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.value = scores[editingRound][player] || 0;
+                input.onchange = function() {
+                    scores[editingRound][player] = parseInt(this.value) || 0;
+                    updateScoreTable(); // Refresh to show updated totals
+                };
+                roundScoreCell.appendChild(input);
+                row.appendChild(roundScoreCell);
+                
+                // Total score
+                const totalScoreCell = document.createElement('td');
+                totalScoreCell.textContent = playerTotals[player];
+                row.appendChild(totalScoreCell);
+                
+                // Action buttons
+                const actionCell = document.createElement('td');
+                const actionDiv = document.createElement('div');
+                actionDiv.className = 'action-buttons';
+                
+                if (editingRound < currentRound) {
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Edit Score';
+                    editBtn.className = 'edit-btn';
+                    editBtn.onclick = function() {
+                        editingRound = parseInt(editingRound);
+                        updateRoundSelector();
+                        updateScoreTable();
+                    };
+                    actionDiv.appendChild(editBtn);
+                }
+                
+                actionCell.appendChild(actionDiv);
+                row.appendChild(actionCell);
+                
+                scoreBody.appendChild(row);
+            });
+        }
+        
+        function nextRound() {
+            currentRound++;
+            scores[currentRound] = {};
+            
+            // Initialize scores for the new round
+            players.forEach(player => {
+                scores[currentRound][player] = 0;
+            });
+            
+            editingRound = currentRound;
+            updateRoundSelector();
+            updateScoreTable();
+        }
+        
+        function endGame() {
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('results-container').style.display = 'block';
+            
+            const resultsBody = document.getElementById('results-body');
+            resultsBody.innerHTML = '';
+            
+            // Calculate final totals
+            const finalScores = {};
+            players.forEach(player => {
+                finalScores[player] = 0;
+                for (let round = 1; round <= currentRound; round++) {
+                    finalScores[player] += scores[round][player] || 0;
+                }
+            });
+            
+            // Sort players by score (highest first)
+            const sortedPlayers = [...players].sort((a, b) => finalScores[b] - finalScores[a]);
+            
+            // Display results
+            sortedPlayers.forEach((player, index) => {
+                const row = document.createElement('tr');
+                if (index === 0) {
+                    row.classList.add('winner');
+                }
+                
+                const posCell = document.createElement('td');
+                posCell.textContent = `#${index + 1}`;
+                if (index === 0) posCell.innerHTML += ' 🏆';
+                row.appendChild(posCell);
+                
+                const nameCell = document.createElement('td');
+                nameCell.textContent = player;
+                row.appendChild(nameCell);
+                
+                const scoreCell = document.createElement('td');
+                scoreCell.textContent = finalScores[player];
+                row.appendChild(scoreCell);
+                
+                resultsBody.appendChild(row);
+            });
+        }
+        
+        function newGame() {
+            // Reset everything
+            players = [];
+            currentRound = 1;
+            editingRound = 1;
+            scores = [];
+            
+            document.getElementById('results-container').style.display = 'none';
+            document.getElementById('setup-container').style.display = 'block';
+            document.getElementById('player-inputs').innerHTML = `
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" placeholder="Player name" class="player-name" style="flex-grow: 1;">
+                    <button onclick="addPlayer()" class="success">Add Player</button>
+                </div>
+            `;
+            document.getElementById('players-display').innerHTML = '';
+            document.getElementById('start-game-btn').disabled = true;
+        }
+    </script>
+</body>
+</html>
