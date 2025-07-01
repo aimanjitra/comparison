@@ -206,6 +206,28 @@
             margin-right: 8px;
         }
         
+        .score-history {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .history-table {
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .history-table th {
+            background-color: var(--dark-color);
+            padding: 8px;
+        }
+        
+        .history-table td {
+            padding: 8px;
+            text-align: center;
+        }
+        
         @media (max-width: 600px) {
             .round-header {
                 flex-direction: column;
@@ -256,6 +278,12 @@
                 <!-- Scores will be added here -->
             </tbody>
         </table>
+        
+        <div class="score-history" id="score-history-container" style="display: none;">
+            <h3>Score History</h3>
+            <div id="score-history-content"></div>
+        </div>
+        
         <div class="action-buttons">
             <button onclick="nextRound()" class="secondary">Next Round ➡️</button>
             <button onclick="endGame()" class="danger">End Game 🏁</button>
@@ -284,8 +312,9 @@
     <script>
         let players = [];
         let currentRound = 1;
-        let scores = [];
+        let scores = []; // Array of objects, each representing a round's scores
         let editingRound = 1;
+        let scoreHistory = {}; // Object to store cumulative scores at each round
         
         function addPlayer() {
             const nameInput = document.querySelector('.player-name');
@@ -320,18 +349,30 @@
         function editPlayerName(index) {
             const newName = prompt("Enter new name for player:", players[index]);
             if (newName && newName.trim() && !players.includes(newName.trim())) {
+                const oldName = players[index];
                 players[index] = newName.trim();
                 updatePlayerDisplay();
                 
                 // Update scores if game has started
                 if (scores.length > 0) {
-                    for (let round in scores) {
-                        if (scores[round][players[index]] === undefined) {
-                            scores[round][players[index]] = scores[round][players[index]] || 0;
-                            delete scores[round][players[index]];
+                    // Update scores for all rounds
+                    for (let round = 1; round <= currentRound; round++) {
+                        if (scores[round][oldName] !== undefined) {
+                            scores[round][newName.trim()] = scores[round][oldName];
+                            delete scores[round][oldName];
                         }
                     }
+                    
+                    // Update score history
+                    for (let round in scoreHistory) {
+                        if (scoreHistory[round][oldName] !== undefined) {
+                            scoreHistory[round][newName.trim()] = scoreHistory[round][oldName];
+                            delete scoreHistory[round][oldName];
+                        }
+                    }
+                    
                     updateScoreTable();
+                    updateScoreHistory();
                 }
             } else if (players.includes(newName.trim())) {
                 alert("This player name already exists!");
@@ -340,13 +381,29 @@
         
         function removePlayer(index) {
             if (confirm(`Remove player ${players[index]}?`)) {
+                const playerToRemove = players[index];
                 players.splice(index, 1);
                 updatePlayerDisplay();
                 document.getElementById('start-game-btn').disabled = players.length === 0;
                 
                 // Update scores if game has started
                 if (scores.length > 0) {
+                    // Remove player from all rounds
+                    for (let round = 1; round <= currentRound; round++) {
+                        if (scores[round][playerToRemove] !== undefined) {
+                            delete scores[round][playerToRemove];
+                        }
+                    }
+                    
+                    // Remove player from score history
+                    for (let round in scoreHistory) {
+                        if (scoreHistory[round][playerToRemove] !== undefined) {
+                            delete scoreHistory[round][playerToRemove];
+                        }
+                    }
+                    
                     updateScoreTable();
+                    updateScoreHistory();
                 }
             }
         }
@@ -357,12 +414,15 @@
             
             // Initialize scores for round 1
             scores[currentRound] = {};
+            scoreHistory[currentRound] = {};
             players.forEach(player => {
                 scores[currentRound][player] = 0;
+                scoreHistory[currentRound][player] = 0;
             });
             
             updateRoundSelector();
             updateScoreTable();
+            updateScoreHistory();
         }
         
         function updateRoundSelector() {
@@ -383,6 +443,7 @@
         function loadRound(roundNumber) {
             editingRound = parseInt(roundNumber);
             updateScoreTable();
+            updateScoreHistory();
         }
         
         function updateScoreTable() {
@@ -391,11 +452,11 @@
             
             document.getElementById('round-number').textContent = editingRound;
             
-            // Calculate totals for each player
+            // Calculate totals for each player up to the current editing round
             const playerTotals = {};
             players.forEach(player => {
                 playerTotals[player] = 0;
-                for (let round = 1; round <= currentRound; round++) {
+                for (let round = 1; round <= editingRound; round++) {
                     playerTotals[player] += scores[round][player] || 0;
                 }
             });
@@ -420,13 +481,26 @@
                 input.type = 'number';
                 input.value = scores[editingRound][player] || 0;
                 input.onchange = function() {
-                    scores[editingRound][player] = parseInt(this.value) || 0;
-                    updateScoreTable(); // Refresh to show updated totals
+                    const newScore = parseInt(this.value) || 0;
+                    const scoreDiff = newScore - (scores[editingRound][player] || 0);
+                    scores[editingRound][player] = newScore;
+                    
+                    // Update cumulative scores for this and all subsequent rounds
+                    for (let round = editingRound; round <= currentRound; round++) {
+                        if (round === editingRound) {
+                            scoreHistory[round][player] = (scoreHistory[round-1]?.[player] || 0) + newScore;
+                        } else {
+                            scoreHistory[round][player] += scoreDiff;
+                        }
+                    }
+                    
+                    updateScoreTable();
+                    updateScoreHistory();
                 };
                 roundScoreCell.appendChild(input);
                 row.appendChild(roundScoreCell);
                 
-                // Total score
+                // Total score up to this round
                 const totalScoreCell = document.createElement('td');
                 totalScoreCell.textContent = playerTotals[player];
                 row.appendChild(totalScoreCell);
@@ -438,7 +512,7 @@
                 
                 if (editingRound < currentRound) {
                     const editBtn = document.createElement('button');
-                    editBtn.textContent = 'Edit Score';
+                    editBtn.textContent = 'Edit Round';
                     editBtn.className = 'edit-btn';
                     editBtn.onclick = function() {
                         editingRound = parseInt(editingRound);
@@ -453,20 +527,67 @@
                 
                 scoreBody.appendChild(row);
             });
+            
+            // Show/hide history based on whether we're viewing current round
+            document.getElementById('score-history-container').style.display = 
+                (editingRound < currentRound) ? 'block' : 'none';
+        }
+        
+        function updateScoreHistory() {
+            const historyContent = document.getElementById('score-history-content');
+            historyContent.innerHTML = '';
+            
+            // Create a table showing cumulative scores at each round
+            const historyTable = document.createElement('table');
+            historyTable.className = 'history-table';
+            
+            // Create header row with round numbers
+            const headerRow = document.createElement('tr');
+            const emptyHeader = document.createElement('th');
+            emptyHeader.textContent = 'Player';
+            headerRow.appendChild(emptyHeader);
+            
+            for (let round = 1; round <= editingRound; round++) {
+                const roundHeader = document.createElement('th');
+                roundHeader.textContent = `Round ${round}`;
+                headerRow.appendChild(roundHeader);
+            }
+            historyTable.appendChild(headerRow);
+            
+            // Create a row for each player
+            players.forEach(player => {
+                const playerRow = document.createElement('tr');
+                const playerCell = document.createElement('td');
+                playerCell.textContent = player;
+                playerRow.appendChild(playerCell);
+                
+                for (let round = 1; round <= editingRound; round++) {
+                    const scoreCell = document.createElement('td');
+                    scoreCell.textContent = scoreHistory[round]?.[player] || 0;
+                    playerRow.appendChild(scoreCell);
+                }
+                
+                historyTable.appendChild(playerRow);
+            });
+            
+            historyContent.appendChild(historyTable);
         }
         
         function nextRound() {
             currentRound++;
             scores[currentRound] = {};
+            scoreHistory[currentRound] = {};
             
             // Initialize scores for the new round
             players.forEach(player => {
                 scores[currentRound][player] = 0;
+                scoreHistory[currentRound][player] = scoreHistory[currentRound-1][player];
             });
             
             editingRound = currentRound;
             updateRoundSelector();
             updateScoreTable();
+            updateScoreHistory();
         }
         
         function endGame() {
@@ -476,14 +597,8 @@
             const resultsBody = document.getElementById('results-body');
             resultsBody.innerHTML = '';
             
-            // Calculate final totals
-            const finalScores = {};
-            players.forEach(player => {
-                finalScores[player] = 0;
-                for (let round = 1; round <= currentRound; round++) {
-                    finalScores[player] += scores[round][player] || 0;
-                }
-            });
+            // Get final scores from the last round's history
+            const finalScores = scoreHistory[currentRound];
             
             // Sort players by score (highest first)
             const sortedPlayers = [...players].sort((a, b) => finalScores[b] - finalScores[a]);
@@ -518,6 +633,7 @@
             currentRound = 1;
             editingRound = 1;
             scores = [];
+            scoreHistory = {};
             
             document.getElementById('results-container').style.display = 'none';
             document.getElementById('setup-container').style.display = 'block';
